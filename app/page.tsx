@@ -95,14 +95,11 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex items-center justify-center px-4 py-3 sm:justify-between">
-            <span
-              className={`text-xs font-medium uppercase text-stone-400 transition-opacity duration-200 ${
-                collapsed ? "sr-only" : "sr-only sm:not-sr-only sm:opacity-100"
-              }`}
-            >
-              Menu
-            </span>
+          <div
+            className={`flex items-center justify-center px-4 py-3 ${
+              collapsed ? "" : "sm:justify-end"
+            }`}
+          >
             <button
               type="button"
               onClick={() => setCollapsed((value) => !value)}
