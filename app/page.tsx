@@ -118,7 +118,7 @@ export default function Home() {
             </button>
           </div>
 
-          <nav className="flex-1 space-y-3 overflow-y-auto px-3 pb-3">
+          <nav className="scrollbar-hidden flex-1 space-y-3 overflow-y-auto px-3 pb-3">
             {menuGroups.map((menuGroup) => (
               <div key={menuGroup.label} className="space-y-1">
                 <p
