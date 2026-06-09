@@ -2,9 +2,11 @@ import { date, integer, pgTable, serial, text, time, timestamp, uniqueIndex } fr
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
+  clerkId: text("clerk_id").unique(),
   name: text("name"),
   email: text("email").notNull().unique(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const posts = pgTable("posts", {

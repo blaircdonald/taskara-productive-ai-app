@@ -1,6 +1,6 @@
 {
-  "id": "bfe6b158-e6fd-4e64-bbdb-7debe50d2b11",
-  "prevId": "43943913-27f7-4d97-b1f1-217569cd9c66",
+  "id": "f0c10b26-d8f7-4b9f-a4a4-531fa82e9ace",
+  "prevId": "46aa4cd0-6731-46b5-8fae-26468f40368c",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -227,6 +227,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "clerk_id": {
+          "name": "clerk_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "text",
@@ -245,12 +251,26 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
+        "users_clerk_id_unique": {
+          "name": "users_clerk_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "clerk_id"
+          ]
+        },
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,

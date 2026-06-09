@@ -1,1 +1,0 @@
-ALTER TABLE "calendar_items" ALTER COLUMN "category_id" SET DATA TYPE integer;
