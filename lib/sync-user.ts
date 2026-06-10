@@ -11,9 +11,10 @@ export async function syncCurrentUserToDatabase() {
     return null;
   }
 
-  const email =
+  const email = (
     user.primaryEmailAddress?.emailAddress ??
-    user.emailAddresses[0]?.emailAddress;
+    user.emailAddresses[0]?.emailAddress
+  )?.trim().toLowerCase();
 
   if (!email) {
     throw new Error("Cannot save Clerk user without an email address.");
@@ -36,6 +37,7 @@ export async function syncCurrentUserToDatabase() {
         clerkId: user.id,
         email,
         name,
+        avatarUrl: user.imageUrl,
         updatedAt: new Date(),
       })
       .where(eq(users.id, existingUser.id))
@@ -50,6 +52,7 @@ export async function syncCurrentUserToDatabase() {
       clerkId: user.id,
       email,
       name,
+      avatarUrl: user.imageUrl,
     })
     .returning();
 

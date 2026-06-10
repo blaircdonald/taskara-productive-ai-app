@@ -22,6 +22,13 @@
       "when": 1781104205561,
       "tag": "0002_young_lila_cheney",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781111188899,
+      "tag": "0003_huge_jackal",
+      "breakpoints": true
     }
   ]
 }
