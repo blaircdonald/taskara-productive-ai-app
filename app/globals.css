@@ -120,3 +120,12 @@
     font: inherit;
   }
 }
+
+.kanban-column-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.kanban-column-scroll::-webkit-scrollbar {
+  display: none;
+}

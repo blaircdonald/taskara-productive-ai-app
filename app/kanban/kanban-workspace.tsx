@@ -4,7 +4,7 @@ import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, us
 import { CSS } from "@dnd-kit/utilities";
 import { CalendarDays, Check, ChevronRight, CirclePlus, Clock3, GripVertical, LayoutDashboard, MoreHorizontal, NotebookPen, Pencil, Plus, Tag, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   createBoard, createColumn, createLabel, createTask, deleteBoard, deleteColumn, deleteTask,
   reorderTasks, updateBoard, updateColumn, updateTask,
@@ -28,13 +28,32 @@ export function KanbanWorkspace({ boards, selectedBoardId, columns: initialColum
   const [tasks, setTasks] = useState(initialTasks);
   const [labels, setLabels] = useState(initialLabels);
   const [boardDialog, setBoardDialog] = useState<Board | "new" | null>(null);
+  const [columnDialog, setColumnDialog] = useState<Column | "new" | null>(null);
   const [taskDialog, setTaskDialog] = useState<{ columnId: number; task?: Task } | null>(null);
   const [activeId, setActiveId] = useState<number | null>(null);
   const [message, setMessage] = useState("");
+  const [columnScroll, setColumnScroll] = useState({ left: 0, viewport: 1, content: 1 });
+  const columnScrollRef = useRef<HTMLDivElement>(null);
+  const columnScrollTrackRef = useRef<HTMLDivElement>(null);
   const [pending, startTransition] = useTransition();
   const selected = boards.find((board) => board.id === selectedBoardId) ?? null;
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }), useSensor(KeyboardSensor));
   const activeTask = tasks.find((task) => task.id === activeId);
+  const canScrollColumns = columnScroll.content > columnScroll.viewport;
+  const scrollThumbWidth = canScrollColumns ? Math.max(12, (columnScroll.viewport / columnScroll.content) * 100) : 100;
+  const scrollThumbLeft = canScrollColumns ? (columnScroll.left / (columnScroll.content - columnScroll.viewport)) * (100 - scrollThumbWidth) : 0;
+
+  useEffect(() => {
+    const element = columnScrollRef.current;
+    if (!element) return;
+    const measure = () => setColumnScroll({ left: element.scrollLeft, viewport: element.clientWidth, content: element.scrollWidth });
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    const content = element.firstElementChild;
+    if (content) observer.observe(content);
+    return () => observer.disconnect();
+  }, [initialColumns.length]);
 
   function run(action: () => Promise<unknown>, success: string) {
     startTransition(async () => {
@@ -45,15 +64,15 @@ export function KanbanWorkspace({ boards, selectedBoardId, columns: initialColum
 
   function selectBoard(id: number) { router.push(`/kanban?board=${id}`); }
 
-  function addColumn() {
-    if (!selected || initialColumns.length >= 5) return;
-    const name = window.prompt("New column name");
-    if (name) run(() => createColumn(selected.id, name), "Column created.");
-  }
-
-  function editColumn(column: Column) {
-    const name = window.prompt("Column name", column.name);
-    if (name && name !== column.name) run(() => updateColumn(column.id, name), "Column updated.");
+  function moveColumnScroll(clientX: number) {
+    const scroller = columnScrollRef.current;
+    const track = columnScrollTrackRef.current;
+    if (!scroller || !track || !canScrollColumns) return;
+    const bounds = track.getBoundingClientRect();
+    const thumbPixels = bounds.width * scrollThumbWidth / 100;
+    const availableTrack = bounds.width - thumbPixels;
+    const thumbLeft = Math.min(availableTrack, Math.max(0, clientX - bounds.left - thumbPixels / 2));
+    scroller.scrollLeft = availableTrack ? thumbLeft / availableTrack * (scroller.scrollWidth - scroller.clientWidth) : 0;
   }
 
   function removeColumn(column: Column) {
@@ -101,18 +120,26 @@ export function KanbanWorkspace({ boards, selectedBoardId, columns: initialColum
         </aside>
         <section className="min-w-0">
           {selected ? <>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stone-200/80 bg-white/76 p-4">
-              <div className="flex min-w-0 items-center gap-3"><span className="h-4 w-4 rounded-full" style={{ backgroundColor: selected.color }} /><div className="min-w-0"><p className="truncate text-lg font-semibold">{selected.name}</p><p className="text-xs text-stone-500">{initialColumns.length} of 5 columns</p></div></div>
-              <div className="flex gap-2"><button onClick={() => setBoardDialog(selected)} className="flex h-9 items-center gap-2 rounded-xl border border-stone-200 bg-white px-3 text-sm hover:bg-stone-50"><Pencil className="h-3.5 w-3.5 text-violet-600" />Edit</button><button disabled={initialColumns.length >= 5} onClick={addColumn} className="flex h-9 items-center gap-2 rounded-xl bg-blue-600 px-3 text-sm text-white hover:bg-blue-700 disabled:opacity-40"><Plus className="h-3.5 w-3.5" />Column</button></div>
+            <div className="min-w-0 rounded-2xl border border-stone-200/80 bg-white/76 p-5 shadow-[0_16px_45px_rgba(120,90,60,0.07)] sm:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-stone-200/80 pb-5">
+                <div className="flex min-w-0 items-center gap-3"><span className="h-4 w-4 rounded-full" style={{ backgroundColor: selected.color }} /><div className="min-w-0"><p className="truncate text-lg font-semibold">{selected.name}</p><p className="text-xs text-stone-500">{initialColumns.length} of 5 columns</p></div></div>
+                <div className="flex gap-2"><button onClick={() => setBoardDialog(selected)} className="flex h-9 items-center gap-2 rounded-xl border border-stone-200 bg-white px-3 text-sm hover:bg-stone-50"><Pencil className="h-3.5 w-3.5 text-violet-600" />Edit</button><button disabled={initialColumns.length >= 5} onClick={() => setColumnDialog("new")} title={initialColumns.length >= 5 ? "This board already has the maximum of 5 columns." : "Add column"} className="flex h-9 items-center gap-2 rounded-xl bg-blue-600 px-3 text-sm text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><Plus className="h-3.5 w-3.5" />Column</button></div>
+              </div>
+              <div ref={columnScrollRef} onScroll={(event) => setColumnScroll({ left: event.currentTarget.scrollLeft, viewport: event.currentTarget.clientWidth, content: event.currentTarget.scrollWidth })} onWheel={(event) => { const element = event.currentTarget; if (element.scrollWidth <= element.clientWidth) return; event.preventDefault(); element.scrollLeft += event.deltaY + event.deltaX; }} className="kanban-column-scroll mt-5 min-w-0 overflow-x-auto overflow-y-hidden">
+                <div className="flex min-w-max items-start gap-5">
+                  {initialColumns.map((column) => <KanbanColumn key={column.id} column={column} tasks={tasks.filter((task) => task.columnId === column.id)} onAdd={() => setTaskDialog({ columnId: column.id })} onEditTask={(task) => setTaskDialog({ columnId: column.id, task })} onEditColumn={() => setColumnDialog(column)} onDeleteColumn={() => removeColumn(column)} />)}
+                </div>
+              </div>
+              <div ref={columnScrollTrackRef} onPointerDown={(event) => { if (!canScrollColumns) return; event.currentTarget.setPointerCapture(event.pointerId); moveColumnScroll(event.clientX); }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) moveColumnScroll(event.clientX); }} onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }} className={`relative mt-5 h-4 touch-none cursor-ew-resize rounded-full border border-[#dfc4aa] bg-[#f0dfcc] p-[3px] shadow-inner transition-opacity ${canScrollColumns ? "opacity-100" : "cursor-default opacity-45"}`} role="scrollbar" aria-label="Scroll board columns" aria-orientation="horizontal" aria-valuemin={0} aria-valuemax={Math.max(0, columnScroll.content - columnScroll.viewport)} aria-valuenow={columnScroll.left}>
+                <div className="absolute bottom-[3px] top-[3px] rounded-full bg-[#b96d52] shadow-sm transition-[width,left] duration-75 hover:bg-[#a54f36]" style={{ width: `${scrollThumbWidth}%`, left: `${scrollThumbLeft}%` }} />
+              </div>
             </div>
-            <div className="min-w-0 overflow-x-auto pb-4"><div className="flex min-h-[520px] min-w-max gap-4">
-              {initialColumns.map((column) => <KanbanColumn key={column.id} column={column} tasks={tasks.filter((task) => task.columnId === column.id)} onAdd={() => setTaskDialog({ columnId: column.id })} onEditTask={(task) => setTaskDialog({ columnId: column.id, task })} onEditColumn={() => editColumn(column)} onDeleteColumn={() => removeColumn(column)} />)}
-            </div></div>
           </> : <div className="flex min-h-[520px] items-center justify-center rounded-2xl border border-dashed border-stone-300 bg-white/55 p-8 text-center"><div><LayoutDashboard className="mx-auto h-9 w-9 text-blue-500" /><h2 className="mt-4 text-xl font-semibold">A fresh board is waiting</h2><p className="mt-2 text-sm text-stone-500">Create a board and its Todo, In Progress, and Done columns will appear here.</p><button onClick={() => setBoardDialog("new")} className="mt-5 h-10 rounded-xl bg-[#a54f36] px-4 text-sm font-medium text-white">Create board</button></div></div>}
         </section>
       </div>
     </div>
     {boardDialog && <BoardDialog board={boardDialog === "new" ? undefined : boardDialog} pending={pending} onClose={() => setBoardDialog(null)} onSave={(input) => run(async () => { const id = boardDialog === "new" ? await createBoard(input) : (await updateBoard(boardDialog.id, input), boardDialog.id); setBoardDialog(null); selectBoard(id); }, boardDialog === "new" ? "Board created." : "Board updated.")} onDelete={boardDialog === "new" ? undefined : () => { if (window.confirm(`Delete "${boardDialog.name}" and all of its tasks?`)) run(async () => { await deleteBoard(boardDialog.id); setBoardDialog(null); router.push("/kanban"); }, "Board deleted."); }} />}
+    {columnDialog && selected && <ColumnDialog column={columnDialog === "new" ? undefined : columnDialog} pending={pending} onClose={() => setColumnDialog(null)} onSave={(name) => run(async () => { if (columnDialog === "new") await createColumn(selected.id, name); else await updateColumn(columnDialog.id, name); setColumnDialog(null); }, columnDialog === "new" ? "Column created." : "Column updated.")} />}
     {taskDialog && <TaskDialog task={taskDialog.task} labels={labels} pending={pending} onClose={() => setTaskDialog(null)} onCreateLabel={async (input) => { const label = await createLabel(input); setLabels((current) => [...current, label].sort((a, b) => a.name.localeCompare(b.name))); return label; }} onSave={(input) => run(async () => { if (taskDialog.task) await updateTask(taskDialog.task.id, input); else await createTask(taskDialog.columnId, input); setTaskDialog(null); }, taskDialog.task ? "Task updated." : "Task created.")} onDelete={!taskDialog.task ? undefined : () => { if (window.confirm(`Delete "${taskDialog.task!.title}"?`)) run(async () => { await deleteTask(taskDialog.task!.id); setTaskDialog(null); }, "Task deleted."); }} />}
     <DragOverlay>{activeTask ? <TaskCard task={activeTask} overlay onOpen={() => {}} /> : null}</DragOverlay>
   </DndContext>;
@@ -120,10 +147,10 @@ export function KanbanWorkspace({ boards, selectedBoardId, columns: initialColum
 
 function KanbanColumn({ column, tasks, onAdd, onEditTask, onEditColumn, onDeleteColumn }: { column: Column; tasks: Task[]; onAdd: () => void; onEditTask: (task: Task) => void; onEditColumn: () => void; onDeleteColumn: () => void }) {
   const { isOver, setNodeRef } = useDroppable({ id: `column:${column.id}` });
-  return <article ref={setNodeRef} className={`w-[290px] shrink-0 rounded-2xl border bg-[#fffdfa]/90 p-3 shadow-[0_12px_35px_rgba(120,90,60,0.07)] transition ${isOver ? "border-blue-400 bg-blue-50/80" : "border-stone-200/80"}`}>
-    <div className="flex items-center gap-2 px-1 py-1"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" /><h3 className="min-w-0 flex-1 truncate font-semibold">{column.name}</h3><span className="rounded-lg bg-stone-100 px-2 py-1 text-[11px] font-semibold text-stone-500">{tasks.length}</span><button onClick={onEditColumn} aria-label="Rename column" className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-800"><Pencil className="h-3.5 w-3.5" /></button><button onClick={onDeleteColumn} aria-label="Delete column" className="rounded-lg p-1.5 text-stone-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button></div>
-    <div className="mt-3 space-y-3">{tasks.map((task) => <TaskCard key={task.id} task={task} onOpen={() => onEditTask(task)} />)}{!tasks.length && <div className="rounded-xl border border-dashed border-stone-300 px-3 py-8 text-center text-xs text-stone-400">Drop tasks here</div>}</div>
-    <button onClick={onAdd} className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-stone-300 text-sm font-medium text-stone-500 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"><Plus className="h-4 w-4" />Add task</button>
+  return <article ref={setNodeRef} className={`w-[340px] shrink-0 rounded-2xl border bg-[#fffdfa]/90 p-4 shadow-[0_12px_35px_rgba(120,90,60,0.07)] transition ${isOver ? "border-blue-400 bg-blue-50/80" : "border-stone-200/80"}`}>
+    <div className="flex items-center gap-2 px-1 py-1"><span className="h-3 w-3 rounded-full bg-blue-500" /><h3 className="min-w-0 flex-1 truncate text-lg font-semibold">{column.name}</h3><span className="rounded-lg bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-500">{tasks.length}</span><button onClick={onEditColumn} aria-label="Rename column" className="rounded-lg p-2 text-stone-400 hover:bg-stone-100 hover:text-stone-800"><Pencil className="h-4 w-4" /></button><button onClick={onDeleteColumn} aria-label="Delete column" className="rounded-lg p-2 text-stone-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button></div>
+    <div className="mt-4 space-y-3">{tasks.map((task) => <TaskCard key={task.id} task={task} onOpen={() => onEditTask(task)} />)}{!tasks.length && <div className="rounded-xl border border-dashed border-stone-300 px-4 py-12 text-center text-sm text-stone-400">Drop tasks here</div>}</div>
+    <button onClick={onAdd} className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-stone-300 text-sm font-medium text-stone-500 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"><Plus className="h-4 w-4" />Add task</button>
   </article>;
 }
 
@@ -142,6 +169,14 @@ function BoardDialog({ board, pending, onClose, onSave, onDelete }: { board?: Bo
     <DialogHeader eyebrow={board ? "Tune your workspace" : "Start something clear"} title={board ? "Edit board" : "New Kanban board"} onClose={onClose} />
     <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_90px]"><label className="text-sm font-medium">Board name<input name="name" required maxLength={80} autoFocus defaultValue={board?.name} placeholder="Website launch" className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 bg-white px-3" /></label><label className="text-sm font-medium">Color<input name="color" type="color" defaultValue={board?.color ?? "#2563eb"} className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 bg-white p-1" /></label></div>
     <div className="mt-6 flex flex-wrap justify-between gap-2">{onDelete ? <button type="button" onClick={onDelete} className="h-10 rounded-xl bg-rose-50 px-3 text-sm font-medium text-rose-700 hover:bg-rose-100">Delete board</button> : <span />}<button disabled={pending} className="h-10 rounded-xl bg-[#a54f36] px-5 text-sm font-medium text-white disabled:opacity-50">{pending ? "Saving..." : board ? "Save changes" : "Create board"}</button></div>
+  </form></Modal>;
+}
+
+function ColumnDialog({ column, pending, onClose, onSave }: { column?: Column; pending: boolean; onClose: () => void; onSave: (name: string) => void }) {
+  return <Modal onClose={onClose}><form onSubmit={(event) => { event.preventDefault(); onSave(String(new FormData(event.currentTarget).get("name"))); }}>
+    <DialogHeader eyebrow={column ? "Keep the workflow clear" : "Shape the workflow"} title={column ? "Rename column" : "New column"} onClose={onClose} />
+    <label className="mt-5 block text-sm font-medium">Column name<input name="name" required maxLength={80} autoFocus defaultValue={column?.name} placeholder="Review" className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 bg-white px-3 outline-none focus:ring-2 focus:ring-blue-400" /></label>
+    <div className="mt-6 flex justify-end"><button disabled={pending} className="h-10 rounded-xl bg-blue-600 px-5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">{pending ? "Saving..." : column ? "Save name" : "Create column"}</button></div>
   </form></Modal>;
 }
 
