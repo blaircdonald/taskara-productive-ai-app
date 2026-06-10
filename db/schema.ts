@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, date, index, integer, pgTable, primaryKey, serial, text, time, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -18,3 +18,83 @@ export const posts = pgTable("posts", {
 });
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+
+export const taskCategories = pgTable(
+  "task_categories",
+  {
+    id: serial("id").primaryKey(),
+    ownerId: text("owner_id").notNull(),
+    name: text("name").notNull(),
+    color: text("color").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex("task_categories_owner_name_idx").on(table.ownerId, table.name)],
+);
+
+export const calendarItems = pgTable("calendar_items", {
+  id: serial("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  title: text("title").notNull(),
+  kind: text("kind").notNull(),
+  description: text("description"),
+  scheduledDate: date("scheduled_date"),
+  scheduledTime: time("scheduled_time"),
+  categoryId: integer("category_id")
+    .notNull()
+    .references(() => taskCategories.id, { onDelete: "restrict" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const kanbanBoards = pgTable("kanban_boards", {
+  id: serial("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  name: text("name").notNull(),
+  color: text("color").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [index("kanban_boards_owner_idx").on(table.ownerId)]);
+
+export const kanbanColumns = pgTable("kanban_columns", {
+  id: serial("id").primaryKey(),
+  boardId: integer("board_id").notNull().references(() => kanbanBoards.id, { onDelete: "cascade" }),
+  ownerId: text("owner_id").notNull(),
+  name: text("name").notNull(),
+  position: integer("position").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [index("kanban_columns_board_position_idx").on(table.boardId, table.position)]);
+
+export const kanbanTasks = pgTable("kanban_tasks", {
+  id: serial("id").primaryKey(),
+  boardId: integer("board_id").notNull().references(() => kanbanBoards.id, { onDelete: "cascade" }),
+  columnId: integer("column_id").notNull().references(() => kanbanColumns.id, { onDelete: "cascade" }),
+  ownerId: text("owner_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  dueDate: date("due_date").notNull(),
+  priority: text("priority").notNull(),
+  position: integer("position").notNull(),
+  calendarItemId: integer("calendar_item_id").references(() => calendarItems.id, { onDelete: "set null" }),
+  notesLinked: boolean("notes_linked").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("kanban_tasks_column_position_idx").on(table.columnId, table.position),
+  uniqueIndex("kanban_tasks_calendar_item_idx").on(table.calendarItemId),
+]);
+
+export const kanbanTaskLabels = pgTable("kanban_task_labels", {
+  taskId: integer("task_id").notNull().references(() => kanbanTasks.id, { onDelete: "cascade" }),
+  categoryId: integer("category_id").notNull().references(() => taskCategories.id, { onDelete: "cascade" }),
+  position: integer("position").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.taskId, table.categoryId] }),
+  index("kanban_task_labels_task_position_idx").on(table.taskId, table.position),
+]);
+
+export type TaskCategory = typeof taskCategories.$inferSelect;
+export type CalendarItem = typeof calendarItems.$inferSelect;
+export type KanbanBoard = typeof kanbanBoards.$inferSelect;
+export type KanbanColumn = typeof kanbanColumns.$inferSelect;
+export type KanbanTask = typeof kanbanTasks.$inferSelect;

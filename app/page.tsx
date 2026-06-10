@@ -1,169 +1,23 @@
-import React from 'react';
+import { AppShell } from "@/components/app-shell";
+import { ArrowRight, CalendarDays, CheckSquare, Plus, Sparkles } from "lucide-react";
+import Link from "next/link";
+
+const stats = [
+  { label: "Focus tasks", value: "12", detail: "4 due today", color: "bg-amber-100 text-amber-700" },
+  { label: "Open spaces", value: "7", detail: "2 shared boards", color: "bg-emerald-100 text-emerald-700" },
+  { label: "AI drafts", value: "18", detail: "5 ready to refine", color: "bg-violet-100 text-violet-700" },
+];
 
 export default function Home() {
-  return (
-    <main style={styles.container}>
-      <div style={styles.hero}>
-        <div style={styles.badge}>Next.js Boilerplate CLI 🚀</div>
-        <h1 style={styles.title}>
-          Your Premium SaaS Stack <span style={styles.gradient}>Is Ready</span>
-        </h1>
-        <p style={styles.subtitle}>
-          Congratulations! Your customized Next.js boilerplate has been successfully scaffolded with all your selected databases, components, and authentication configurations.
-        </p>
-        
-        <div style={styles.ctaGroup}>
-          <a href="https://nextjs.org/docs" target="_blank" rel="noopener noreferrer" style={styles.primaryCta}>
-            Read Next.js Docs
-          </a>
-          <a href="#features" style={styles.secondaryCta}>
-            Explore Stack Files
-          </a>
-        </div>
-      </div>
-
-      <section id="features" style={styles.grid}>
-        <div style={styles.card}>
-          <div style={styles.icon}>⚡</div>
-          <h3 style={styles.cardTitle}>App Router Ready</h3>
-          <p style={styles.cardText}>Built using modern Next.js 15 App Router with full Server Components and safe SEO presets.</p>
-        </div>
-        
-        <div style={styles.card}>
-          <div style={styles.icon}>🔒</div>
-          <h3 style={styles.cardTitle}>Modular Auth</h3>
-          <p style={styles.cardText}>Pre-configured middleware rules and pages for secure, lightning-fast session validation.</p>
-        </div>
-
-        <div style={styles.card}>
-          <div style={styles.icon}>🗄️</div>
-          <h3 style={styles.cardTitle}>Database Integration</h3>
-          <p style={styles.cardText}>Configured connections, client instances, schemas, and live migration configurations.</p>
-        </div>
-      </section>
-
-      <footer style={styles.footer}>
-        Created with <span style={{ color: '#ec4899' }}>♥</span> by{' '}
-        <a
-          href="https://www.youtube.com/@tubeguruji"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: '#71717a', textDecoration: 'underline', transition: 'color 0.2s' }}
-        >
-          Tubeguruji
-        </a>
-      </footer>
-    </main>
-  );
+  return <AppShell><div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-5 py-5 sm:px-7 lg:px-9">
+    <header className="flex flex-col gap-4 rounded-2xl border border-stone-200/80 bg-white/78 p-5 shadow-[0_20px_60px_rgba(120,90,60,0.08)] backdrop-blur md:flex-row md:items-center md:justify-between">
+      <div><p className="text-sm font-medium text-amber-700">Good morning, Blair</p><h1 className="mt-1 text-2xl font-semibold sm:text-3xl">Your ideas, boards, and tasks in one calm place.</h1></div>
+      <Link href="/calendar" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#a54f36] px-4 text-sm font-medium text-white shadow-sm hover:bg-[#91432e]"><Plus className="h-4 w-4 text-amber-100" />Plan your day</Link>
+    </header>
+    <div className="grid gap-4 md:grid-cols-3">{stats.map((stat) => <article key={stat.label} className="rounded-2xl border border-stone-200/80 bg-white/82 p-5 shadow-[0_16px_45px_rgba(120,90,60,0.07)]"><div className="flex items-center justify-between"><p className="text-sm font-medium text-stone-500">{stat.label}</p><span className={`rounded-lg px-2.5 py-1 text-xs font-medium ${stat.color}`}>Live</span></div><p className="mt-5 text-3xl font-semibold">{stat.value}</p><p className="mt-1 text-sm text-stone-500">{stat.detail}</p></article>)}</div>
+    <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+      <section className="rounded-2xl border border-stone-200/80 bg-white/82 p-6 shadow-[0_16px_45px_rgba(120,90,60,0.07)]"><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-100 text-teal-700"><CalendarDays className="h-5 w-5" /></span><h2 className="mt-5 text-xl font-semibold">Make room for what matters</h2><p className="mt-2 max-w-xl text-sm leading-6 text-stone-600">Plan tasks and reminders, keep loose ideas as drafts, and move the day around whenever plans change.</p><Link href="/calendar" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#a54f36]">Open calendar <ArrowRight className="h-4 w-4" /></Link></section>
+      <section className="rounded-2xl border border-amber-200/70 bg-[#fff8ed] p-6 shadow-[0_16px_45px_rgba(120,90,60,0.07)]"><div className="flex gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-700"><Sparkles className="h-5 w-5" /></span><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100 text-blue-700"><CheckSquare className="h-5 w-5" /></span></div><h2 className="mt-5 text-xl font-semibold">A calmer planning rhythm</h2><p className="mt-2 text-sm leading-6 text-stone-600">Capture first, schedule when ready, and keep every task easy to find.</p></section>
+    </div>
+  </div></AppShell>;
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#09090b',
-    color: '#fafafa',
-    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif",
-    padding: '2rem',
-    boxSizing: 'border-box',
-  },
-  hero: {
-    textAlign: 'center',
-    maxWidth: '800px',
-    marginBottom: '4rem',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  badge: {
-    display: 'inline-block',
-    padding: '0.5rem 1rem',
-    borderRadius: '9999px',
-    backgroundColor: '#27272a',
-    fontSize: '0.875rem',
-    fontWeight: 500,
-    color: '#38bdf8',
-    marginBottom: '1.5rem',
-    border: '1px solid #3f3f46',
-  },
-  title: {
-    fontSize: '3rem',
-    fontWeight: 800,
-    letterSpacing: '-0.025em',
-    lineHeight: 1.2,
-    margin: '0 0 1rem 0',
-  },
-  gradient: {
-    background: 'linear-gradient(to right, #38bdf8, #818cf8, #c084fc)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-  },
-  subtitle: {
-    fontSize: '1.125rem',
-    color: '#a1a1aa',
-    lineHeight: 1.6,
-    margin: '0 0 2rem 0',
-    maxWidth: '600px',
-  },
-  ctaGroup: {
-    display: 'flex',
-    gap: '1rem',
-  },
-  primaryCta: {
-    padding: '0.75rem 1.5rem',
-    borderRadius: '8px',
-    backgroundColor: '#38bdf8',
-    color: '#09090b',
-    fontWeight: 600,
-    textDecoration: 'none',
-    transition: 'opacity 0.2s',
-  },
-  secondaryCta: {
-    padding: '0.75rem 1.5rem',
-    borderRadius: '8px',
-    backgroundColor: 'transparent',
-    color: '#fafafa',
-    fontWeight: 600,
-    textDecoration: 'none',
-    border: '1px solid #3f3f46',
-    transition: 'background-color 0.2s',
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-    gap: '2rem',
-    width: '100%',
-    maxWidth: '1000px',
-    marginBottom: '4rem',
-  },
-  card: {
-    backgroundColor: '#18181b',
-    border: '1px solid #27272a',
-    borderRadius: '12px',
-    padding: '1.5rem',
-    transition: 'transform 0.2s, border-color 0.2s',
-  },
-  icon: {
-    fontSize: '2rem',
-    marginBottom: '1rem',
-  },
-  cardTitle: {
-    fontSize: '1.25rem',
-    fontWeight: 600,
-    margin: '0 0 0.5rem 0',
-  },
-  cardText: {
-    fontSize: '0.875rem',
-    color: '#a1a1aa',
-    lineHeight: 1.5,
-    margin: 0,
-  },
-  footer: {
-    fontSize: '0.875rem',
-    color: '#71717a',
-    marginTop: 'auto',
-  },
-};
