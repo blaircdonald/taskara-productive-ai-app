@@ -26,7 +26,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createCalendarItem, deleteCalendarItem, rescheduleCalendarItem, updateCalendarItem } from "./actions";
 
 type Category = { id: number; name: string; color: string };
@@ -70,6 +70,11 @@ export function CalendarWorkspace({ initialItems, categories }: { initialItems: 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }), useSensor(KeyboardSensor));
   const days = useMemo(() => view === "month" ? monthDays(cursor) : weekDays(cursor), [cursor, view]);
   const activeItem = items.find((item) => item.id === activeId);
+  useEffect(() => {
+    if (!message) return;
+    const timeout = window.setTimeout(() => setMessage(""), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [message]);
 
   function move(amount: number) {
     setCursor((current) => view === "month" ? new Date(current.getFullYear(), current.getMonth() + amount, 1) : addDays(current, amount * 7));
