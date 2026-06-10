@@ -23,10 +23,11 @@ import {
   GripVertical,
   Inbox,
   Plus,
+  Trash2,
   X,
 } from "lucide-react";
 import { useMemo, useRef, useState, useTransition } from "react";
-import { createCalendarItem, rescheduleCalendarItem, updateCalendarItem } from "./actions";
+import { createCalendarItem, deleteCalendarItem, rescheduleCalendarItem, updateCalendarItem } from "./actions";
 
 type Category = { id: number; name: string; color: string };
 type Item = {
@@ -39,6 +40,7 @@ type Item = {
   categoryId: number;
   categoryName: string;
   categoryColor: string;
+  linkedTaskId: number | null;
 };
 type View = "month" | "week";
 
@@ -187,6 +189,12 @@ function TaskDialog({ initialDate, categories, item, onClose, onSaved }: { initi
       onSaved();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not create item."); setSaving(false); }
   }
+  async function remove() {
+    if (!item || !window.confirm(item.linkedTaskId ? "Remove this item from Calendar? The Kanban task will remain and be unlinked." : "Delete this Calendar item?")) return;
+    setSaving(true); setError("");
+    try { await deleteCalendarItem(item.id); onSaved(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Could not delete item."); setSaving(false); }
+  }
   return <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/35 p-3 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <form onSubmit={(event) => { event.preventDefault(); submit(new FormData(event.currentTarget), false); }} className="max-h-[94vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-stone-200 bg-[#fffdfa] p-5 shadow-2xl sm:p-6">
       <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase text-teal-700">{item ? "Review and update" : initialDate ? "Schedule something" : "Capture for later"}</p><h2 className="mt-1 text-2xl font-semibold">{item ? "Edit task or reminder" : "New task or reminder"}</h2></div><button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-xl border border-stone-200 bg-white"><X className="h-4 w-4" /></button></div>
@@ -199,7 +207,7 @@ function TaskDialog({ initialDate, categories, item, onClose, onSaved }: { initi
         <label className="block text-sm font-medium">Description<textarea name="description" rows={3} maxLength={1000} defaultValue={item?.description ?? ""} placeholder="Add a little context..." className="mt-1.5 w-full resize-none rounded-xl border border-stone-200 bg-white p-3" /></label>
       </div>
       {error && <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button type="button" disabled={saving} onClick={(event) => submit(new FormData(event.currentTarget.form!), true)} className="h-11 rounded-xl border border-stone-200 bg-white px-4 text-sm font-medium hover:bg-stone-50">Save as draft</button><button type="submit" disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#a54f36] px-5 text-sm font-medium text-white hover:bg-[#91432e] disabled:opacity-50">{saving ? <Clock3 className="h-4 w-4 animate-spin" /> : <CalendarDays className="h-4 w-4" />}{item ? "Save changes" : "Schedule item"}</button></div>
+      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:items-center"><div className="flex-1">{item && <button type="button" disabled={saving} onClick={remove} className="inline-flex h-11 items-center gap-2 rounded-xl bg-rose-50 px-4 text-sm font-medium text-rose-700 hover:bg-rose-100"><Trash2 className="h-4 w-4" />{item.linkedTaskId ? "Remove from Calendar" : "Delete"}</button>}</div><button type="button" disabled={saving || Boolean(item?.linkedTaskId)} onClick={(event) => submit(new FormData(event.currentTarget.form!), true)} title={item?.linkedTaskId ? "Linked Kanban tasks must keep a due date." : undefined} className="h-11 rounded-xl border border-stone-200 bg-white px-4 text-sm font-medium hover:bg-stone-50 disabled:opacity-40">Save as draft</button><button type="submit" disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#a54f36] px-5 text-sm font-medium text-white hover:bg-[#91432e] disabled:opacity-50">{saving ? <Clock3 className="h-4 w-4 animate-spin" /> : <CalendarDays className="h-4 w-4" />}{item ? "Save changes" : "Schedule item"}</button></div>
     </form>
   </div>;
 }

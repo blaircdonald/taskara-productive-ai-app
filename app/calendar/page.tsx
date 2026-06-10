@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { and, asc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
-import { calendarItems, db, taskCategories } from "@/db";
+import { calendarItems, db, kanbanTasks, taskCategories } from "@/db";
 import { CalendarWorkspace } from "./calendar-workspace";
 
 const defaultCategories = [
@@ -30,7 +30,8 @@ export default async function CalendarPage() {
       categoryId: calendarItems.categoryId,
       categoryName: taskCategories.name,
       categoryColor: taskCategories.color,
-    }).from(calendarItems).innerJoin(taskCategories, and(eq(calendarItems.categoryId, taskCategories.id), eq(taskCategories.ownerId, userId))).where(eq(calendarItems.ownerId, userId)).orderBy(asc(calendarItems.scheduledDate), asc(calendarItems.scheduledTime)),
+      linkedTaskId: kanbanTasks.id,
+    }).from(calendarItems).innerJoin(taskCategories, and(eq(calendarItems.categoryId, taskCategories.id), eq(taskCategories.ownerId, userId))).leftJoin(kanbanTasks, and(eq(kanbanTasks.calendarItemId, calendarItems.id), eq(kanbanTasks.ownerId, userId))).where(eq(calendarItems.ownerId, userId)).orderBy(asc(calendarItems.scheduledDate), asc(calendarItems.scheduledTime)),
   ]);
 
   return <AppShell><CalendarWorkspace initialItems={itemRows} categories={categories} /></AppShell>;
