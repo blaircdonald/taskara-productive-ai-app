@@ -1,4 +1,4 @@
-import { boolean, date, index, integer, pgTable, primaryKey, serial, text, time, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, date, index, integer, jsonb, pgTable, primaryKey, serial, text, time, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -105,9 +105,26 @@ export const kanbanTaskLabels = pgTable("kanban_task_labels", {
   index("kanban_task_labels_task_position_idx").on(table.taskId, table.position),
 ]);
 
+export const notes = pgTable("notes", {
+  id: serial("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  title: text("title").notNull().default("Untitled note"),
+  content: jsonb("content").notNull().default({ type: "doc", content: [{ type: "paragraph" }] }),
+  color: text("color").notNull().default("#d97706"),
+  isPinned: boolean("is_pinned").notNull().default(false),
+  trashedAt: timestamp("trashed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("notes_owner_idx").on(table.ownerId),
+  index("notes_owner_pinned_updated_idx").on(table.ownerId, table.isPinned, table.updatedAt),
+  index("notes_owner_trashed_idx").on(table.ownerId, table.trashedAt),
+]);
+
 export type TaskCategory = typeof taskCategories.$inferSelect;
 export type CalendarItem = typeof calendarItems.$inferSelect;
 export type KanbanBoard = typeof kanbanBoards.$inferSelect;
 export type KanbanBoardMember = typeof kanbanBoardMembers.$inferSelect;
 export type KanbanColumn = typeof kanbanColumns.$inferSelect;
 export type KanbanTask = typeof kanbanTasks.$inferSelect;
+export type Note = typeof notes.$inferSelect;

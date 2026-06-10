@@ -77,6 +77,12 @@ function KanbanWorkspaceContent({ boards, selectedBoardId, columns: initialColum
   const scrollThumbLeft = canScrollColumns ? (columnScroll.left / (columnScroll.content - columnScroll.viewport)) * (100 - scrollThumbWidth) : 0;
 
   useEffect(() => {
+    if (!message) return;
+    const timeout = window.setTimeout(() => setMessage(""), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [message]);
+
+  useEffect(() => {
     setTasks(initialTasks);
   }, [initialTasks]);
 
