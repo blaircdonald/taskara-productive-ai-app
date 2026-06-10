@@ -44,6 +44,14 @@ export function KanbanWorkspace({ boards, selectedBoardId, columns: initialColum
   const scrollThumbLeft = canScrollColumns ? (columnScroll.left / (columnScroll.content - columnScroll.viewport)) * (100 - scrollThumbWidth) : 0;
 
   useEffect(() => {
+    setTasks(initialTasks);
+  }, [initialTasks]);
+
+  useEffect(() => {
+    setLabels(initialLabels);
+  }, [initialLabels]);
+
+  useEffect(() => {
     const element = columnScrollRef.current;
     if (!element) return;
     const measure = () => setColumnScroll({ left: element.scrollLeft, viewport: element.clientWidth, content: element.scrollWidth });
@@ -106,27 +114,27 @@ export function KanbanWorkspace({ boards, selectedBoardId, columns: initialColum
   }
 
   return <DndContext sensors={sensors} onDragStart={(event) => setActiveId(Number(String(event.active.id).replace("task:", "")))} onDragEnd={handleDragEnd} onDragCancel={() => setActiveId(null)}>
-    <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-5 px-3 py-4 sm:px-5 lg:px-7">
+    <div className="mx-auto flex min-h-screen w-full max-w-[1800px] flex-col gap-5 px-3 py-4 sm:px-5 lg:px-7">
       <header className="flex flex-col gap-4 rounded-2xl border border-stone-200/80 bg-white/82 p-4 shadow-[0_16px_50px_rgba(120,90,60,0.08)] sm:p-5 lg:flex-row lg:items-center lg:justify-between">
         <div><p className="text-sm font-medium text-blue-700">Shape the work, one step at a time</p><h1 className="mt-1 text-2xl font-semibold sm:text-3xl">Task Boards</h1></div>
         <button onClick={() => setBoardDialog("new")} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#a54f36] px-4 text-sm font-medium text-white hover:bg-[#91432e]"><CirclePlus className="h-4 w-4 text-amber-100" />New board</button>
       </header>
       {message && <button onClick={() => setMessage("")} className="self-start rounded-lg bg-stone-800 px-3 py-2 text-left text-xs text-white">{message}</button>}
-      <div className="grid min-w-0 gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <aside className="self-start rounded-2xl border border-stone-200/80 bg-white/82 p-3 shadow-[0_16px_45px_rgba(120,90,60,0.07)] lg:sticky lg:top-5">
+      <div className="grid min-h-[calc(100vh-156px)] min-w-0 flex-1 items-stretch gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <aside className="h-full rounded-2xl border border-stone-200/80 bg-white/82 p-3 shadow-[0_16px_45px_rgba(120,90,60,0.07)]">
           <div className="flex items-center justify-between px-2 py-2"><div><p className="text-xs font-semibold uppercase text-stone-400">Workspace</p><h2 className="mt-1 font-semibold">Your boards</h2></div><LayoutDashboard className="h-5 w-5 text-blue-600" /></div>
           <div className="mt-2 flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">{boards.map((board) => <button key={board.id} onClick={() => selectBoard(board.id)} className={`flex min-w-[170px] items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition lg:min-w-0 ${board.id === selectedBoardId ? "bg-stone-900 text-white shadow-sm" : "hover:bg-stone-100"}`}><span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: board.color }} /><span className="min-w-0 flex-1 truncate font-medium">{board.name}</span><ChevronRight className="h-4 w-4 shrink-0 opacity-50" /></button>)}</div>
           {!boards.length && <p className="px-2 py-6 text-sm leading-6 text-stone-500">Create your first board to begin organizing tasks.</p>}
         </aside>
-        <section className="min-w-0">
+        <section className="min-w-0 h-full">
           {selected ? <>
-            <div className="min-w-0 rounded-2xl border border-stone-200/80 bg-white/76 p-5 shadow-[0_16px_45px_rgba(120,90,60,0.07)] sm:p-6">
+            <div className="flex h-full min-w-0 flex-col rounded-2xl border border-stone-200/80 bg-white/76 p-5 shadow-[0_16px_45px_rgba(120,90,60,0.07)] sm:p-6">
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-stone-200/80 pb-5">
                 <div className="flex min-w-0 items-center gap-3"><span className="h-4 w-4 rounded-full" style={{ backgroundColor: selected.color }} /><div className="min-w-0"><p className="truncate text-lg font-semibold">{selected.name}</p><p className="text-xs text-stone-500">{initialColumns.length} of 5 columns</p></div></div>
                 <div className="flex gap-2"><button onClick={() => setBoardDialog(selected)} className="flex h-9 items-center gap-2 rounded-xl border border-stone-200 bg-white px-3 text-sm hover:bg-stone-50"><Pencil className="h-3.5 w-3.5 text-violet-600" />Edit</button><button disabled={initialColumns.length >= 5} onClick={() => setColumnDialog("new")} title={initialColumns.length >= 5 ? "This board already has the maximum of 5 columns." : "Add column"} className="flex h-9 items-center gap-2 rounded-xl bg-blue-600 px-3 text-sm text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><Plus className="h-3.5 w-3.5" />Column</button></div>
               </div>
-              <div ref={columnScrollRef} onScroll={(event) => setColumnScroll({ left: event.currentTarget.scrollLeft, viewport: event.currentTarget.clientWidth, content: event.currentTarget.scrollWidth })} onWheel={(event) => { const element = event.currentTarget; if (element.scrollWidth <= element.clientWidth) return; event.preventDefault(); element.scrollLeft += event.deltaY + event.deltaX; }} className="kanban-column-scroll mt-5 min-w-0 overflow-x-auto overflow-y-hidden">
-                <div className="flex min-w-max items-start gap-5">
+              <div ref={columnScrollRef} onScroll={(event) => setColumnScroll({ left: event.currentTarget.scrollLeft, viewport: event.currentTarget.clientWidth, content: event.currentTarget.scrollWidth })} onWheel={(event) => { const element = event.currentTarget; if (element.scrollWidth <= element.clientWidth) return; event.preventDefault(); element.scrollLeft += event.deltaY + event.deltaX; }} className="kanban-column-scroll mt-5 min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
+                <div className="flex h-full min-w-max items-stretch gap-5">
                   {initialColumns.map((column) => <KanbanColumn key={column.id} column={column} tasks={tasks.filter((task) => task.columnId === column.id)} onAdd={() => setTaskDialog({ columnId: column.id })} onEditTask={(task) => setTaskDialog({ columnId: column.id, task })} onEditColumn={() => setColumnDialog(column)} onDeleteColumn={() => removeColumn(column)} />)}
                 </div>
               </div>
@@ -134,7 +142,7 @@ export function KanbanWorkspace({ boards, selectedBoardId, columns: initialColum
                 <div className="absolute bottom-[3px] top-[3px] rounded-full bg-[#b96d52] shadow-sm transition-[width,left] duration-75 hover:bg-[#a54f36]" style={{ width: `${scrollThumbWidth}%`, left: `${scrollThumbLeft}%` }} />
               </div>
             </div>
-          </> : <div className="flex min-h-[520px] items-center justify-center rounded-2xl border border-dashed border-stone-300 bg-white/55 p-8 text-center"><div><LayoutDashboard className="mx-auto h-9 w-9 text-blue-500" /><h2 className="mt-4 text-xl font-semibold">A fresh board is waiting</h2><p className="mt-2 text-sm text-stone-500">Create a board and its Todo, In Progress, and Done columns will appear here.</p><button onClick={() => setBoardDialog("new")} className="mt-5 h-10 rounded-xl bg-[#a54f36] px-4 text-sm font-medium text-white">Create board</button></div></div>}
+          </> : <div className="flex h-full min-h-[520px] items-center justify-center rounded-2xl border border-dashed border-stone-300 bg-white/55 p-8 text-center"><div><LayoutDashboard className="mx-auto h-9 w-9 text-blue-500" /><h2 className="mt-4 text-xl font-semibold">A fresh board is waiting</h2><p className="mt-2 text-sm text-stone-500">Create a board and its Todo, In Progress, and Done columns will appear here.</p><button onClick={() => setBoardDialog("new")} className="mt-5 h-10 rounded-xl bg-[#a54f36] px-4 text-sm font-medium text-white">Create board</button></div></div>}
         </section>
       </div>
     </div>
@@ -147,10 +155,10 @@ export function KanbanWorkspace({ boards, selectedBoardId, columns: initialColum
 
 function KanbanColumn({ column, tasks, onAdd, onEditTask, onEditColumn, onDeleteColumn }: { column: Column; tasks: Task[]; onAdd: () => void; onEditTask: (task: Task) => void; onEditColumn: () => void; onDeleteColumn: () => void }) {
   const { isOver, setNodeRef } = useDroppable({ id: `column:${column.id}` });
-  return <article ref={setNodeRef} className={`w-[340px] shrink-0 rounded-2xl border bg-[#fffdfa]/90 p-4 shadow-[0_12px_35px_rgba(120,90,60,0.07)] transition ${isOver ? "border-blue-400 bg-blue-50/80" : "border-stone-200/80"}`}>
+  return <article ref={setNodeRef} className={`flex h-full min-h-[420px] w-[340px] shrink-0 flex-col rounded-2xl border bg-[var(--app-surface)] p-4 shadow-[0_12px_35px_rgba(120,90,60,0.07)] transition ${isOver ? "border-blue-400 ring-2 ring-inset ring-blue-200" : "border-stone-200/80"}`}>
     <div className="flex items-center gap-2 px-1 py-1"><span className="h-3 w-3 rounded-full bg-blue-500" /><h3 className="min-w-0 flex-1 truncate text-lg font-semibold">{column.name}</h3><span className="rounded-lg bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-500">{tasks.length}</span><button onClick={onEditColumn} aria-label="Rename column" className="rounded-lg p-2 text-stone-400 hover:bg-stone-100 hover:text-stone-800"><Pencil className="h-4 w-4" /></button><button onClick={onDeleteColumn} aria-label="Delete column" className="rounded-lg p-2 text-stone-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button></div>
-    <div className="mt-4 space-y-3">{tasks.map((task) => <TaskCard key={task.id} task={task} onOpen={() => onEditTask(task)} />)}{!tasks.length && <div className="rounded-xl border border-dashed border-stone-300 px-4 py-12 text-center text-sm text-stone-400">Drop tasks here</div>}</div>
-    <button onClick={onAdd} className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-stone-300 text-sm font-medium text-stone-500 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"><Plus className="h-4 w-4" />Add task</button>
+    <div className="mt-4 space-y-3">{tasks.map((task) => <TaskCard key={task.id} task={task} onOpen={() => onEditTask(task)} />)}{!tasks.length && <div className="rounded-xl border border-dashed border-stone-300 bg-white px-4 py-12 text-center text-sm text-stone-400">Drop tasks here</div>}</div>
+    <button onClick={onAdd} className="mt-auto flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-stone-300 bg-white text-sm font-medium text-stone-500 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"><Plus className="h-4 w-4" />Add task</button>
   </article>;
 }
 
