@@ -36,7 +36,7 @@ const groups: { label: string; items: NavItem[] }[] = [
     items: [
       { label: "Notes", href: "/notes", icon: StickyNote, color: "#ca8a04" },
       { label: "Whiteboard", href: "/whiteboard", icon: PenTool, color: "#db2777" },
-      { label: "Pages / Spaces", href: "#", icon: LibraryBig, color: "#16a34a" },
+      { label: "Pages / Spaces", href: "/spaces", icon: LibraryBig, color: "#7c3aed" },
       { label: "AI Template Builder", href: "#", icon: WandSparkles, color: "#ea580c" },
     ],
   },
@@ -64,7 +64,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {groups.map((group) => <div key={group.label} className="space-y-1">
               {!collapsed && <p className="sr-only px-3 pb-1 text-[11px] font-semibold uppercase text-stone-400 sm:not-sr-only">{group.label}</p>}
               {group.items.map((item) => {
-                const active = item.href !== "#" && pathname === item.href;
+                const active = item.href !== "#" && (pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`)));
                 const Icon = item.icon;
                 return <Link key={item.label} href={item.href} title={item.label} aria-label={item.label} className={`group flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition ${active ? "bg-[#a54f36] text-white shadow-sm" : "text-stone-600 hover:bg-stone-100 hover:text-stone-950"} ${collapsed ? "justify-center" : "justify-center sm:justify-start"}`}>
                   <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${active ? "bg-white/14" : "bg-white shadow-sm ring-1 ring-stone-200/70"}`}><Icon className="h-4 w-4" style={{ color: active ? "#fef3c7" : item.color }} /></span>
