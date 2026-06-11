@@ -121,6 +121,20 @@ export const notes = pgTable("notes", {
   index("notes_owner_trashed_idx").on(table.ownerId, table.trashedAt),
 ]);
 
+export const whiteboards = pgTable("whiteboards", {
+  id: serial("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  name: text("name").notNull().default("Untitled whiteboard"),
+  color: text("color").notNull().default("#db2777"),
+  elements: jsonb("elements").notNull().default([]),
+  appState: jsonb("app_state").notNull().default({}),
+  files: jsonb("files").notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("whiteboards_owner_updated_idx").on(table.ownerId, table.updatedAt),
+]);
+
 export type TaskCategory = typeof taskCategories.$inferSelect;
 export type CalendarItem = typeof calendarItems.$inferSelect;
 export type KanbanBoard = typeof kanbanBoards.$inferSelect;
@@ -128,3 +142,4 @@ export type KanbanBoardMember = typeof kanbanBoardMembers.$inferSelect;
 export type KanbanColumn = typeof kanbanColumns.$inferSelect;
 export type KanbanTask = typeof kanbanTasks.$inferSelect;
 export type Note = typeof notes.$inferSelect;
+export type Whiteboard = typeof whiteboards.$inferSelect;
