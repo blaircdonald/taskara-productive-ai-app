@@ -16,20 +16,25 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   Bell,
+  Briefcase,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
   Clock3,
   GripVertical,
   Inbox,
+  Heart,
+  Home,
+  Lightbulb,
   Plus,
+  Tag,
   Trash2,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createCalendarItem, deleteCalendarItem, rescheduleCalendarItem, updateCalendarItem } from "./actions";
 
-type Category = { id: number; name: string; color: string };
+type Category = { id: number; name: string; color: string; scope: string; icon: string };
 type Item = {
   id: number;
   title: string;
@@ -40,6 +45,7 @@ type Item = {
   categoryId: number;
   categoryName: string;
   categoryColor: string;
+  categoryIcon: string;
   linkedTaskId: number | null;
 };
 type View = "month" | "week";
@@ -56,11 +62,12 @@ const monthDays = (date: Date) => {
   return Array.from({ length: 42 }, (_, index) => addDays(start, index));
 };
 const weekDays = (date: Date) => Array.from({ length: 7 }, (_, index) => addDays(startOfWeek(date), index));
+const categoryIconMap = { briefcase: Briefcase, home: Home, heart: Heart, lightbulb: Lightbulb, bell: Bell, "calendar-days": CalendarDays, tag: Tag };
 
-export function CalendarWorkspace({ initialItems, categories }: { initialItems: Item[]; categories: Category[] }) {
+export function CalendarWorkspace({ initialItems, categories, defaultView }: { initialItems: Item[]; categories: Category[]; defaultView: View }) {
   const [items, setItems] = useState(initialItems);
   const [cursor, setCursor] = useState(() => new Date());
-  const [view, setView] = useState<View>("month");
+  const [view, setView] = useState<View>(defaultView);
   const [dialogDate, setDialogDate] = useState<string | null | undefined>(undefined);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [activeId, setActiveId] = useState<number | null>(null);
@@ -151,8 +158,9 @@ function DayCell({ day, currentMonth, view, items, onAdd, onEdit }: { day: Date;
 
 function ItemCard({ item, compact = false, overlay = false, onOpen }: { item: Item; compact?: boolean; overlay?: boolean; onOpen?: () => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: item.id });
+  const CategoryIcon = categoryIconMap[item.categoryIcon as keyof typeof categoryIconMap] || Tag;
   return <button ref={setNodeRef} style={{ transform: CSS.Translate.toString(transform), borderLeftColor: item.categoryColor }} {...listeners} {...attributes} onClick={onOpen} title={`${item.title} · ${item.categoryName}${onOpen ? " · Click to edit" : ""}`} className={`flex w-full min-w-0 cursor-grab items-center gap-1.5 rounded-lg border border-stone-200/80 border-l-[3px] bg-white px-2 text-left shadow-sm touch-none active:cursor-grabbing ${compact ? "h-7" : "min-h-10 py-2"} ${isDragging && !overlay ? "opacity-30" : ""} ${overlay ? "w-56 rotate-2 shadow-xl" : ""}`}>
-    {item.kind === "reminder" ? <Bell className="h-3 w-3 shrink-0 text-violet-600" /> : <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
+    <CategoryIcon className="h-3 w-3 shrink-0" />
     <span className={`min-w-0 flex-1 truncate font-medium text-stone-800 ${compact ? "text-[11px]" : "text-xs"}`}>{item.title}</span>
     {item.scheduledTime && <span className="shrink-0 text-[10px] text-stone-400">{item.scheduledTime.slice(0, 5)}</span>}
   </button>;
@@ -170,6 +178,8 @@ function TaskDialog({ initialDate, categories, item, onClose, onSaved }: { initi
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [custom, setCustom] = useState(false);
+  const [kind, setKind] = useState<"task" | "reminder">(item?.kind === "reminder" ? "reminder" : "task");
+  const availableCategories = categories.filter((category) => category.scope === (kind === "reminder" ? "reminders" : "calendar"));
   async function submit(formData: FormData, draft: boolean) {
     setSaving(true); setError("");
     try {
@@ -205,7 +215,7 @@ function TaskDialog({ initialDate, categories, item, onClose, onSaved }: { initi
       <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase text-teal-700">{item ? "Review and update" : initialDate ? "Schedule something" : "Capture for later"}</p><h2 className="mt-1 text-2xl font-semibold">{item ? "Edit task or reminder" : "New task or reminder"}</h2></div><button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-xl border border-stone-200 bg-white"><X className="h-4 w-4" /></button></div>
       <div className="mt-5 space-y-4">
         <label className="block text-sm font-medium">Title<input name="title" required maxLength={140} autoFocus defaultValue={item?.title} placeholder="What needs your attention?" className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 bg-white px-3 outline-none focus:ring-2 focus:ring-amber-400" /></label>
-        <div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm font-medium">Type<select name="kind" defaultValue={item?.kind ?? "task"} className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 bg-white px-3"><option value="task">Task</option><option value="reminder">Reminder</option></select></label><label className="block text-sm font-medium">Category<select name="categoryId" defaultValue={item?.categoryId} disabled={custom} className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 bg-white px-3 disabled:opacity-50">{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label></div>
+        <div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm font-medium">Type<select name="kind" value={kind} onChange={(event) => setKind(event.target.value === "reminder" ? "reminder" : "task")} className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 bg-white px-3"><option value="task">Task</option><option value="reminder">Reminder</option></select></label><label className="block text-sm font-medium">Category<select name="categoryId" defaultValue={item?.categoryId} disabled={custom} className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 bg-white px-3 disabled:opacity-50">{availableCategories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label></div>
         {!item && <label className="flex items-center gap-2 text-sm text-stone-600"><input type="checkbox" checked={custom} onChange={(event) => setCustom(event.target.checked)} />Create a custom category</label>}
         {custom && <div className="grid gap-4 sm:grid-cols-[1fr_80px]"><label className="block text-sm font-medium">Category name<input name="categoryName" required className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 bg-white px-3" /></label><label className="block text-sm font-medium">Color<input name="categoryColor" type="color" defaultValue="#0f766e" className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 bg-white p-1" /></label></div>}
         <div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm font-medium">Date<input name="date" type="date" defaultValue={initialDate ?? ""} className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 bg-white px-3" /></label><label className="block text-sm font-medium">Optional time<input name="time" type="time" defaultValue={item?.scheduledTime?.slice(0, 5) ?? ""} className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 bg-white px-3" /></label></div>

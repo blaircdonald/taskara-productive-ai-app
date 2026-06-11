@@ -62,13 +62,14 @@ export async function createCalendarItem(input: {
     const name = input.categoryName.trim().slice(0, 40);
     const color = input.categoryColor ?? "";
     if (!name || !colorPattern.test(color)) throw new Error("Invalid category.");
-    const [created] = await db.insert(taskCategories).values({ ownerId: owner, name, color }).onConflictDoNothing().returning();
+    const scope = input.kind === "reminder" ? "reminders" : "calendar";
+    const [created] = await db.insert(taskCategories).values({ ownerId: owner, name, color, scope, icon: input.kind === "reminder" ? "bell" : "calendar-days" }).onConflictDoNothing().returning();
     if (created) categoryId = created.id;
-    else categoryId = (await db.select().from(taskCategories).where(and(eq(taskCategories.ownerId, owner), eq(taskCategories.name, name))).limit(1))[0]?.id;
+    else categoryId = (await db.select().from(taskCategories).where(and(eq(taskCategories.ownerId, owner), eq(taskCategories.scope, scope), eq(taskCategories.name, name))).limit(1))[0]?.id;
   }
   if (!categoryId) throw new Error("Choose a category.");
   const category = await db.select().from(taskCategories).where(and(eq(taskCategories.id, categoryId), eq(taskCategories.ownerId, owner))).limit(1);
-  if (!category.length) throw new Error("Invalid category.");
+  if (!category.length || category[0].scope !== (input.kind === "reminder" ? "reminders" : "calendar")) throw new Error("Invalid category.");
 
   await db.insert(calendarItems).values({
     ownerId: owner,
@@ -98,7 +99,7 @@ export async function updateCalendarItem(itemId: number, input: {
   if (input.scheduledTime && !timePattern.test(input.scheduledTime)) throw new Error("Invalid time.");
 
   const category = await db.select().from(taskCategories).where(and(eq(taskCategories.id, input.categoryId), eq(taskCategories.ownerId, owner))).limit(1);
-  if (!category.length) throw new Error("Invalid category.");
+  if (!category.length || category[0].scope !== (input.kind === "reminder" ? "reminders" : "calendar")) throw new Error("Invalid category.");
   await syncLinkedTask(owner, itemId, input);
 
   const result = await db.update(calendarItems).set({

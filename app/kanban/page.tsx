@@ -5,20 +5,22 @@ import { db, kanbanBoardMembers, kanbanColumns, kanbanTaskLabels, kanbanTasks, t
 import { accessibleBoards, currentActor, normalizeEmail, roomIdForBoard } from "@/lib/kanban-access";
 import { liveblocks, liveblocksConfigured } from "@/lib/liveblocks-server";
 import { syncCurrentUserToDatabase } from "@/lib/sync-user";
+import { getUserSettings } from "@/lib/settings";
 import { KanbanWorkspace } from "./kanban-workspace";
 
 export default async function KanbanPage({ searchParams }: { searchParams: Promise<{ board?: string }> }) {
   let actor;
   try { actor = await currentActor(); } catch { redirect("/sign-in"); }
   await syncCurrentUserToDatabase();
+  const settings = await getUserSettings(actor.clerkId);
 
   const boards = (await accessibleBoards(actor)).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   const requestedId = Number((await searchParams).board);
   const selected = boards.find((board) => board.id === requestedId) ?? boards[0] ?? null;
   if (selected && selected.id !== requestedId) redirect(`/kanban?board=${selected.id}`);
-  const labels = selected ? await db.select().from(taskCategories).where(eq(taskCategories.ownerId, selected.ownerId)).orderBy(asc(taskCategories.name)) : [];
+  const labels = selected ? await db.select().from(taskCategories).where(and(eq(taskCategories.ownerId, selected.ownerId), eq(taskCategories.scope, "kanban"))).orderBy(asc(taskCategories.name)) : [];
 
-  if (!selected) return <AppShell><KanbanWorkspace boards={boards.map((board) => ({ ...board, isOwner: board.ownerId === actor.clerkId }))} selectedBoardId={null} columns={[]} tasks={[]} labels={labels} collaborators={[]} /></AppShell>;
+  if (!selected) return <AppShell><KanbanWorkspace boards={boards.map((board) => ({ ...board, isOwner: board.ownerId === actor.clerkId }))} selectedBoardId={null} columns={[]} tasks={[]} labels={labels} collaborators={[]} defaultPriority={settings.defaultTaskPriority} /></AppShell>;
 
   const [columns, taskRows, labelRows, members, ownerRows] = await Promise.all([
     db.select().from(kanbanColumns).where(and(eq(kanbanColumns.ownerId, selected.ownerId), eq(kanbanColumns.boardId, selected.id))).orderBy(asc(kanbanColumns.position)),
@@ -52,5 +54,5 @@ export default async function KanbanPage({ searchParams }: { searchParams: Promi
     }),
   ];
   const tasks = taskRows.map((task) => ({ ...task, labels: labelRows.filter((label) => label.taskId === task.id).map(({ id, name, color }) => ({ id, name, color })) }));
-  return <AppShell><KanbanWorkspace boards={boards.map((board) => ({ ...board, isOwner: board.ownerId === actor.clerkId }))} selectedBoardId={selected.id} columns={columns} tasks={tasks} labels={labels} collaborators={collaborators} /></AppShell>;
+  return <AppShell><KanbanWorkspace boards={boards.map((board) => ({ ...board, isOwner: board.ownerId === actor.clerkId }))} selectedBoardId={selected.id} columns={columns} tasks={tasks} labels={labels} collaborators={collaborators} defaultPriority={settings.defaultTaskPriority} /></AppShell>;
 }

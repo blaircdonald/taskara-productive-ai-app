@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { getUserSettings } from "@/lib/settings";
 
 const diagramTypes = ["flowchart", "mind-map", "system-architecture", "user-journey", "process"] as const;
 const colors = ["#fef3c7", "#dbeafe", "#dcfce7", "#fce7f3", "#ede9fe", "#ffedd5"];
@@ -24,9 +25,9 @@ function isRetryable(error: unknown) {
 
 const wait = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-async function generateDiagram(ai: GoogleGenAI, contents: string) {
+async function generateDiagram(ai: GoogleGenAI, contents: string, preferredModel: string) {
   const models = [...new Set([
-    process.env.GEMINI_MODEL || "gemini-3.5-flash",
+    preferredModel,
     process.env.GEMINI_FALLBACK_MODEL || "gemini-2.5-flash",
   ])];
   let lastError: unknown;
@@ -126,18 +127,20 @@ export async function POST(request: Request) {
   if (!userId) return NextResponse.json({ error: "You must be signed in." }, { status: 401 });
   if (!process.env.GEMINI_API_KEY) return NextResponse.json({ error: "AI diagrams are not configured. Add GEMINI_API_KEY to the server environment." }, { status: 503 });
   try {
+    const settings = await getUserSettings(userId);
+    if (!settings.aiProcessingEnabled || !settings.aiDiagramEnabled) return NextResponse.json({ error: "AI Diagram is disabled in Settings." }, { status: 403 });
     const body = await request.json();
     const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
     const type = diagramTypes.includes(body.type) ? body.type : "flowchart";
     if (!prompt || prompt.length > 2000) return NextResponse.json({ error: "Enter a prompt between 1 and 2,000 characters." }, { status: 400 });
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const response = await generateDiagram(ai, `Create a concise ${type} diagram for: ${prompt}
+    const response = await generateDiagram(ai, `Create a ${settings.aiBehavior} ${type} diagram in a ${settings.aiTone.toLowerCase()} style for: ${prompt}
 
 Return only valid JSON with this shape:
 {"nodes":[{"id":"unique-id","label":"short label","color":"#fef3c7"}],"edges":[{"from":"node-id","to":"node-id","label":"optional"}]}
 
 Use 4-15 nodes. Keep labels brief. Use only light hex background colors. The application will arrange the nodes.`,
-    );
+    settings.aiModel);
     if (!response.text) throw new Error("Gemini returned an empty response.");
     return NextResponse.json(validateDiagram(parseJson(response.text), type));
   } catch (error) {

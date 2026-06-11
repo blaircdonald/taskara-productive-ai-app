@@ -12,12 +12,11 @@ import {
   Settings,
   Sparkles,
   StickyNote,
-  WandSparkles,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 type NavItem = { label: string; href: string; icon: LucideIcon; color: string };
 
@@ -37,15 +36,18 @@ const groups: { label: string; items: NavItem[] }[] = [
       { label: "Notes", href: "/notes", icon: StickyNote, color: "#ca8a04" },
       { label: "Whiteboard", href: "/whiteboard", icon: PenTool, color: "#db2777" },
       { label: "Pages / Spaces", href: "/spaces", icon: LibraryBig, color: "#7c3aed" },
-      { label: "AI Template Builder", href: "#", icon: WandSparkles, color: "#ea580c" },
     ],
   },
-  { label: "System", items: [{ label: "Settings", href: "#", icon: Settings, color: "#64748b" }] },
+  { label: "System", items: [{ label: "Settings", href: "/settings", icon: Settings, color: "#64748b" }] },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    // Existing workspace surfaces are light-only; prevent stale or system-applied dark mode.
+    document.documentElement.classList.remove("dark");
+  }, []);
 
   return (
     <main className="min-h-screen bg-[var(--app-surface)] text-stone-950">

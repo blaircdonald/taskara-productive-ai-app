@@ -27,10 +27,31 @@ export const taskCategories = pgTable(
     ownerId: text("owner_id").notNull(),
     name: text("name").notNull(),
     color: text("color").notNull(),
+    scope: text("scope").notNull().default("kanban"),
+    icon: text("icon").notNull().default("tag"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [uniqueIndex("task_categories_owner_name_idx").on(table.ownerId, table.name)],
+  (table) => [uniqueIndex("task_categories_owner_scope_name_idx").on(table.ownerId, table.scope, table.name)],
 );
+
+export const userSettings = pgTable("user_settings", {
+  ownerId: text("owner_id").primaryKey(),
+  theme: text("theme").notNull().default("system"),
+  notifyReminders: boolean("notify_reminders").notNull().default(true),
+  notifyDailySummary: boolean("notify_daily_summary").notNull().default(false),
+  notifyCollaboration: boolean("notify_collaboration").notNull().default(true),
+  defaultCalendarView: text("default_calendar_view").notNull().default("month"),
+  defaultTaskPriority: text("default_task_priority").notNull().default("medium"),
+  noteAutoSave: boolean("note_auto_save").notNull().default(true),
+  aiModel: text("ai_model").notNull().default("gemini-2.5-flash"),
+  aiBehavior: text("ai_behavior").notNull().default("balanced"),
+  aiTone: text("ai_tone").notNull().default("Friendly"),
+  aiRefineEnabled: boolean("ai_refine_enabled").notNull().default(true),
+  aiDiagramEnabled: boolean("ai_diagram_enabled").notNull().default(true),
+  aiProcessingEnabled: boolean("ai_processing_enabled").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
 export const calendarItems = pgTable("calendar_items", {
   id: serial("id").primaryKey(),
@@ -111,6 +132,7 @@ export const notes = pgTable("notes", {
   title: text("title").notNull().default("Untitled note"),
   content: jsonb("content").notNull().default({ type: "doc", content: [{ type: "paragraph" }] }),
   color: text("color").notNull().default("#d97706"),
+  categoryId: integer("category_id").references(() => taskCategories.id, { onDelete: "set null" }),
   isPinned: boolean("is_pinned").notNull().default(false),
   trashedAt: timestamp("trashed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -205,6 +227,7 @@ export const spaceActivity = pgTable("space_activity", {
 ]);
 
 export type TaskCategory = typeof taskCategories.$inferSelect;
+export type UserSettings = typeof userSettings.$inferSelect;
 export type CalendarItem = typeof calendarItems.$inferSelect;
 export type KanbanBoard = typeof kanbanBoards.$inferSelect;
 export type KanbanBoardMember = typeof kanbanBoardMembers.$inferSelect;
