@@ -35,7 +35,7 @@ const groups: { label: string; items: NavItem[] }[] = [
     label: "Create",
     items: [
       { label: "Notes", href: "/notes", icon: StickyNote, color: "#ca8a04" },
-      { label: "Whiteboard", href: "#", icon: PenTool, color: "#db2777" },
+      { label: "Whiteboard", href: "/whiteboard", icon: PenTool, color: "#db2777" },
       { label: "Pages / Spaces", href: "#", icon: LibraryBig, color: "#16a34a" },
       { label: "AI Template Builder", href: "#", icon: WandSparkles, color: "#ea580c" },
     ],
