@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { getUserSettings } from "@/lib/settings";
 
 const actions = {
   grammar: "Improve grammar, spelling, and clarity without changing the meaning.",
@@ -17,6 +18,8 @@ export async function POST(request: Request) {
   if (!userId) return NextResponse.json({ error: "You must be signed in." }, { status: 401 });
   if (!process.env.GEMINI_API_KEY) return NextResponse.json({ error: "AI Refine is not configured. Add GEMINI_API_KEY to the server environment." }, { status: 503 });
   try {
+    const settings = await getUserSettings(userId);
+    if (!settings.aiProcessingEnabled || !settings.aiRefineEnabled) return NextResponse.json({ error: "AI Refine is disabled in Settings." }, { status: 403 });
     const body = await request.json();
     const text = typeof body.text === "string" ? body.text.trim() : "";
     const action = body.action as keyof typeof actions;
@@ -26,8 +29,8 @@ export async function POST(request: Request) {
     if (action === "tone" && (!tone || !tones.includes(tone))) return NextResponse.json({ error: "Choose a valid tone." }, { status: 400 });
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || "gemini-3.5-flash",
-      contents: `Rewrite the text below. ${actions[action]}${tone ? ` Requested tone: ${tone}.` : ""}\n\nReturn only the rewritten text, without quotes, labels, markdown fences, or commentary.\n\nTEXT:\n${text}`,
+      model: settings.aiModel,
+      contents: `Rewrite the text below. ${actions[action]} Requested default tone: ${settings.aiTone}.${tone ? ` Requested tone: ${tone}.` : ""} Response detail: ${settings.aiBehavior}.\n\nReturn only the rewritten text, without quotes, labels, markdown fences, or commentary.\n\nTEXT:\n${text}`,
     });
     const refined = response.text?.trim();
     if (!refined) throw new Error("Gemini returned an empty response.");

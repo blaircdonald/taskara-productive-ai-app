@@ -10,17 +10,17 @@ import StarterKit from "@tiptap/starter-kit";
 import {
   ArrowLeft, Bold, Check, CheckSquare, ChevronDown, Code, Copy, FileText, Heading1, Heading2,
   Italic, Link2, List, ListOrdered, MoreHorizontal, Palette, Pin, Plus, Quote, Redo2, RotateCcw,
-  Mic, MicOff, Search, Sparkles, Strikethrough, Trash2, Undo2, WandSparkles,
+  Mic, MicOff, Search, Sparkles, Strikethrough, Tag, Trash2, Undo2, WandSparkles,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useAssemblyAIStreaming } from "@/hooks/use-assemblyai-streaming";
 import {
-  createNote, duplicateNote, permanentlyDeleteNote, renameNote, restoreNote, saveNote,
+  createNote, duplicateNote, permanentlyDeleteNote, renameNote, restoreNote, saveNote, setNoteCategory,
   setNotePinned, trashNote, updateNoteColor,
 } from "./actions";
 
-type Summary = { id: number; title: string; color: string; isPinned: boolean; trashedAt: string | null; updatedAt: string };
+type Summary = { id: number; title: string; color: string; categoryId: number | null; isPinned: boolean; trashedAt: string | null; updatedAt: string };
 type FullNote = Summary & { content: unknown };
 const colors = ["#d97706", "#2563eb", "#16a34a", "#7c3aed", "#db2777", "#ea580c", "#64748b"];
 const tones = ["Professional", "Friendly", "Confident", "Casual", "Concise"];
@@ -29,7 +29,7 @@ const refinements = [
   ["longer", "Make longer"], ["simplify", "Simplify language"],
 ] as const;
 
-export function NotesWorkspace({ notes, trash, selected, trashOpen }: { notes: Summary[]; trash: Summary[]; selected: FullNote | null; trashOpen: boolean }) {
+export function NotesWorkspace({ notes, trash, selected, trashOpen, categories: _categories, autoSave, aiRefineEnabled }: { notes: Summary[]; trash: Summary[]; selected: FullNote | null; trashOpen: boolean; categories: { id: number; name: string; color: string; icon: string }[]; autoSave: boolean; aiRefineEnabled: boolean }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [menuId, setMenuId] = useState<number | null>(null);
@@ -62,7 +62,7 @@ export function NotesWorkspace({ notes, trash, selected, trashOpen }: { notes: S
         <button onClick={() => navigate(trashOpen ? "/notes" : "/notes?trash=1")} className={`m-3 flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium ${trashOpen ? "bg-stone-900 text-white" : "text-stone-600 hover:bg-stone-100"}`}><Trash2 className="h-4 w-4" /><span className="flex-1 text-left">Trash</span><span className="rounded-full bg-stone-200 px-2 py-0.5 text-xs text-stone-700">{trash.length}</span></button>
       </aside>
       <main className={`${trashOpen || !selected ? "hidden lg:flex" : "flex"} min-w-0 flex-1 flex-col`}>
-        {selected ? <NoteEditor key={selected.id} note={selected} onBack={() => navigate("/notes")} /> : <div className="flex h-full flex-1 items-center justify-center p-8"><Empty text="Choose a note or create a new one." /></div>}
+        {selected ? <NoteEditor key={selected.id} note={selected} categories={_categories} autoSave={autoSave} aiRefineEnabled={aiRefineEnabled} onBack={() => navigate("/notes")} /> : <div className="flex h-full flex-1 items-center justify-center p-8"><Empty text="Choose a note or create a new one." /></div>}
       </main>
     </div>
   </div>;
@@ -78,9 +78,9 @@ function TrashList({ notes, pending, onRestore, onDelete }: { notes: Summary[]; 
   return <div><div className="px-2 pb-3"><p className="text-sm font-semibold">Trash</p><p className="mt-1 text-xs leading-5 text-stone-500">Restore notes or remove them permanently.</p></div><div className="space-y-2">{notes.map((note) => <div key={note.id} className="rounded-xl border border-stone-200 bg-white p-3"><div className="flex items-center gap-2"><FileText className="h-4 w-4" style={{ color: note.color }} /><p className="min-w-0 flex-1 truncate text-sm font-medium">{note.title}</p></div><div className="mt-3 flex gap-2"><button disabled={pending} onClick={() => onRestore(note)} className="flex h-8 flex-1 items-center justify-center gap-1 rounded-lg bg-stone-100 text-xs font-medium"><RotateCcw className="h-3.5 w-3.5" />Restore</button><button disabled={pending} onClick={() => onDelete(note)} className="flex h-8 flex-1 items-center justify-center gap-1 rounded-lg bg-rose-50 text-xs font-medium text-rose-700"><Trash2 className="h-3.5 w-3.5" />Delete</button></div></div>)}{!notes.length && <Empty text="Trash is empty." />}</div></div>;
 }
 
-function NoteEditor({ note, onBack }: { note: FullNote; onBack: () => void }) {
+function NoteEditor({ note, categories, autoSave, aiRefineEnabled, onBack }: { note: FullNote; categories: { id: number; name: string; color: string }[]; autoSave: boolean; aiRefineEnabled: boolean; onBack: () => void }) {
   const [title, setTitle] = useState(note.title);
-  const [status, setStatus] = useState<"saved" | "saving" | "error">("saved");
+  const [status, setStatus] = useState<"saved" | "saving" | "unsaved" | "error">("saved");
   const [slashOpen, setSlashOpen] = useState(false);
   const [slashIndex, setSlashIndex] = useState(0);
   const [aiOpen, setAiOpen] = useState(false);
@@ -116,11 +116,12 @@ function NoteEditor({ note, onBack }: { note: FullNote; onBack: () => void }) {
   }
   function scheduleSave(activeEditor = editor) {
     if (!activeEditor) return;
+    if (!autoSave) { setStatus("unsaved"); return; }
     setStatus("saving");
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => persist(activeEditor), 700);
   }
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); if (editor && !editor.isDestroyed) void saveNote(note.id, { title: titleRef.current, content: editor.getJSON() }); }, [editor, note.id]);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); if (autoSave && editor && !editor.isDestroyed) void saveNote(note.id, { title: titleRef.current, content: editor.getJSON() }); }, [autoSave, editor, note.id]);
   useEffect(() => {
     if (!message) return;
     const timeout = window.setTimeout(() => setMessage(""), 5000);
@@ -172,7 +173,8 @@ function NoteEditor({ note, onBack }: { note: FullNote; onBack: () => void }) {
   }
   const voiceActive = voice.status === "connecting" || voice.status === "recording" || voice.status === "stopping";
   return <div className="relative flex min-h-0 flex-1 flex-col bg-[#fffdfa]">
-    <header className="border-b border-stone-200/80 px-4 py-4 sm:px-7"><div className="mx-auto flex max-w-5xl items-center gap-3"><button onClick={() => { voice.stopRecording(); persist(); onBack(); }} className="flex h-9 items-center gap-1 rounded-lg border border-stone-200 px-2 text-xs font-medium lg:hidden"><ArrowLeft className="h-4 w-4" />Notes</button><span className="h-3 w-3 rounded-full" style={{ backgroundColor: note.color }} /><input value={title} maxLength={160} onChange={(event) => { setTitle(event.target.value); titleRef.current = event.target.value; scheduleSave(); }} onBlur={() => persist()} className="min-w-0 flex-1 bg-transparent text-xl font-semibold outline-none sm:text-2xl" placeholder="Untitled note" /><button onMouseDown={(event) => event.preventDefault()} onClick={toggleRecording} disabled={voice.status === "stopping"} aria-label={voiceActive ? "Stop Recording" : "Speak to Note"} className={`flex h-9 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-semibold transition disabled:opacity-60 ${voiceActive ? "bg-rose-100 text-rose-700" : "border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"}`}>{voiceActive ? <MicOff className={`h-4 w-4 ${voice.status === "recording" ? "animate-pulse" : ""}`} /> : <Mic className="h-4 w-4" />}<span className="hidden sm:inline">{voiceActive ? voice.status === "stopping" ? "Stopping..." : "Stop Recording" : "Speak to Note"}</span></button><span className={`shrink-0 text-xs ${status === "error" ? "text-rose-600" : "text-stone-400"}`}>{status === "saving" ? "Saving..." : status === "error" ? "Save failed" : <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-emerald-600" />Saved</span>}</span></div></header>
+    <header className="border-b border-stone-200/80 px-4 py-4 sm:px-7"><div className="mx-auto flex max-w-5xl items-center gap-3"><button onClick={() => { voice.stopRecording(); persist(); onBack(); }} className="flex h-9 items-center gap-1 rounded-lg border border-stone-200 px-2 text-xs font-medium lg:hidden"><ArrowLeft className="h-4 w-4" />Notes</button><span className="h-3 w-3 rounded-full" style={{ backgroundColor: note.color }} /><input value={title} maxLength={160} onChange={(event) => { setTitle(event.target.value); titleRef.current = event.target.value; scheduleSave(); }} onBlur={() => { if (autoSave) persist(); }} className="min-w-0 flex-1 bg-transparent text-xl font-semibold outline-none sm:text-2xl" placeholder="Untitled note" /><button onMouseDown={(event) => event.preventDefault()} onClick={toggleRecording} disabled={voice.status === "stopping"} aria-label={voiceActive ? "Stop Recording" : "Speak to Note"} className={`flex h-9 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-semibold transition disabled:opacity-60 ${voiceActive ? "bg-rose-100 text-rose-700" : "border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"}`}>{voiceActive ? <MicOff className={`h-4 w-4 ${voice.status === "recording" ? "animate-pulse" : ""}`} /> : <Mic className="h-4 w-4" />}<span className="hidden sm:inline">{voiceActive ? voice.status === "stopping" ? "Stopping..." : "Stop Recording" : "Speak to Note"}</span></button>{!autoSave && <button onClick={() => persist()} className="flex h-9 items-center gap-1 rounded-lg bg-[#a54f36] px-3 text-xs font-medium text-white"><Check className="h-3.5 w-3.5" />Save</button>}<span className={`shrink-0 text-xs ${status === "error" ? "text-rose-600" : "text-stone-400"}`}>{status === "saving" ? "Saving..." : status === "unsaved" ? "Unsaved" : status === "error" ? "Save failed" : <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-emerald-600" />Saved</span>}</span></div></header>
+    <div className="flex items-center gap-2 border-b border-stone-200/80 bg-white/70 px-4 py-2 sm:px-7"><Tag className="h-4 w-4 text-stone-400" /><select defaultValue={note.categoryId ?? ""} onChange={(event) => void setNoteCategory(note.id, event.target.value ? Number(event.target.value) : null)} className="h-8 rounded-lg border border-stone-200 bg-white px-2 text-xs"><option value="">No category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>
     <Toolbar editor={editor} />
     <div className="min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-8"><div onKeyDownCapture={(event) => {
       if (!slashOpen) return;
@@ -181,7 +183,7 @@ function NoteEditor({ note, onBack }: { note: FullNote; onBack: () => void }) {
       if (event.key === "Enter") { event.preventDefault(); runSlash(slashIndex); }
       if (event.key === "Escape") { event.preventDefault(); setSlashOpen(false); }
     }} className="relative mx-auto max-w-3xl">
-      <BubbleMenu editor={editor} options={{ placement: "top" }}><div className="flex items-center gap-1 rounded-xl border border-stone-200 bg-white p-1 shadow-xl"><Tool icon={<Bold />} active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()} /><Tool icon={<Italic />} active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()} /><Tool icon={<Strikethrough />} active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()} /><div className="mx-1 h-5 border-l border-stone-200" /><button disabled={aiPending} onClick={() => setAiOpen(!aiOpen)} className="flex h-8 items-center gap-1.5 rounded-lg bg-amber-50 px-2 text-xs font-semibold text-amber-800"><WandSparkles className="h-3.5 w-3.5" />{aiPending ? "Refining..." : "AI Refine"}<ChevronDown className="h-3 w-3" /></button></div></BubbleMenu>
+      <BubbleMenu editor={editor} options={{ placement: "top" }}><div className="flex items-center gap-1 rounded-xl border border-stone-200 bg-white p-1 shadow-xl"><Tool icon={<Bold />} active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()} /><Tool icon={<Italic />} active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()} /><Tool icon={<Strikethrough />} active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()} /><div className="mx-1 h-5 border-l border-stone-200" />{aiRefineEnabled && <button disabled={aiPending} onClick={() => setAiOpen(!aiOpen)} className="flex h-8 items-center gap-1.5 rounded-lg bg-amber-50 px-2 text-xs font-semibold text-amber-800"><WandSparkles className="h-3.5 w-3.5" />{aiPending ? "Refining..." : "AI Refine"}<ChevronDown className="h-3 w-3" /></button>}</div></BubbleMenu>
       {aiOpen && <AiMenu pending={aiPending} onRefine={refine} />}
       {slashOpen && <div className="absolute left-3 top-8 z-30 grid w-64 gap-1 rounded-xl border border-stone-200 bg-white p-2 shadow-xl">{commands.map((command, index) => <button key={command.label} onClick={() => runSlash(index)} className={`flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${index === slashIndex ? "bg-amber-50 text-amber-900" : "hover:bg-stone-50"}`}><command.icon className="h-4 w-4 text-stone-500" />{command.label}</button>)}</div>}
       {message && <button onClick={() => setMessage("")} className="mb-4 w-full rounded-xl bg-rose-50 p-3 text-left text-sm text-rose-700">{message}</button>}

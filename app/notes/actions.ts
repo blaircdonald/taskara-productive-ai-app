@@ -3,7 +3,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { db, notes } from "@/db";
+import { db, notes, taskCategories } from "@/db";
 
 const colorPattern = /^#[0-9a-fA-F]{6}$/;
 const emptyDocument = { type: "doc", content: [{ type: "paragraph" }] };
@@ -60,6 +60,17 @@ export async function duplicateNote(noteId: number) {
 export async function updateNoteColor(noteId: number, color: string) {
   const owner = await ownerId();
   const result = await db.update(notes).set({ color: validColor(color), updatedAt: new Date() }).where(and(eq(notes.id, noteId), eq(notes.ownerId, owner), isNull(notes.trashedAt))).returning({ id: notes.id });
+  if (!result.length) throw new Error("Note not found.");
+  refresh();
+}
+
+export async function setNoteCategory(noteId: number, categoryId: number | null) {
+  const owner = await ownerId();
+  if (categoryId) {
+    const category = await db.select().from(taskCategories).where(and(eq(taskCategories.id, categoryId), eq(taskCategories.ownerId, owner), eq(taskCategories.scope, "notes"))).limit(1);
+    if (!category.length) throw new Error("Invalid note category.");
+  }
+  const result = await db.update(notes).set({ categoryId, updatedAt: new Date() }).where(and(eq(notes.id, noteId), eq(notes.ownerId, owner), isNull(notes.trashedAt))).returning({ id: notes.id });
   if (!result.length) throw new Error("Note not found.");
   refresh();
 }

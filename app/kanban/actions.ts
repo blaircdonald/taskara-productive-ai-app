@@ -41,17 +41,17 @@ function taskValues(input: TaskInput) {
 async function validateLabels(owner: string, labelIds: number[]) {
   const unique = [...new Set(labelIds)].slice(0, 12);
   if (!unique.length) return [];
-  const labels = await db.select().from(taskCategories).where(and(eq(taskCategories.ownerId, owner), inArray(taskCategories.id, unique)));
+  const labels = await db.select().from(taskCategories).where(and(eq(taskCategories.ownerId, owner), eq(taskCategories.scope, "kanban"), inArray(taskCategories.id, unique)));
   if (labels.length !== unique.length) throw new Error("One or more labels are invalid.");
   return unique.map((id) => labels.find((label) => label.id === id)!);
 }
 
 async function kanbanCategory(owner: string) {
-  const existing = await db.select().from(taskCategories).where(and(eq(taskCategories.ownerId, owner), eq(taskCategories.name, "Kanban"))).limit(1);
+  const existing = await db.select().from(taskCategories).where(and(eq(taskCategories.ownerId, owner), eq(taskCategories.scope, "calendar"), eq(taskCategories.name, "Kanban"))).limit(1);
   if (existing.length) return existing[0];
-  const [created] = await db.insert(taskCategories).values({ ownerId: owner, name: "Kanban", color: "#2563eb" }).onConflictDoNothing().returning();
+  const [created] = await db.insert(taskCategories).values({ ownerId: owner, name: "Kanban", color: "#2563eb", scope: "calendar", icon: "calendar-days" }).onConflictDoNothing().returning();
   if (created) return created;
-  return (await db.select().from(taskCategories).where(and(eq(taskCategories.ownerId, owner), eq(taskCategories.name, "Kanban"))).limit(1))[0];
+  return (await db.select().from(taskCategories).where(and(eq(taskCategories.ownerId, owner), eq(taskCategories.scope, "calendar"), eq(taskCategories.name, "Kanban"))).limit(1))[0];
 }
 
 async function syncCalendar(owner: string, task: typeof kanbanTasks.$inferSelect, labels: { id: number }[], enabled: boolean) {
@@ -146,7 +146,7 @@ export async function createLabel(boardId: number, input: { name: string; color:
   const actor = await currentActor();
   const { ownerId: owner } = await ownerBoard(actor, boardId);
   const name = nameValue(input.name, "Label name").slice(0, 40);
-  const [created] = await db.insert(taskCategories).values({ ownerId: owner, name, color: colorValue(input.color) }).onConflictDoNothing().returning();
+  const [created] = await db.insert(taskCategories).values({ ownerId: owner, name, color: colorValue(input.color), scope: "kanban", icon: "tag" }).onConflictDoNothing().returning();
   if (!created) throw new Error("A label with that name already exists.");
   refresh();
   return created;
