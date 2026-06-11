@@ -10,10 +10,11 @@ import StarterKit from "@tiptap/starter-kit";
 import {
   ArrowLeft, Bold, Check, CheckSquare, ChevronDown, Code, Copy, FileText, Heading1, Heading2,
   Italic, Link2, List, ListOrdered, MoreHorizontal, Palette, Pin, Plus, Quote, Redo2, RotateCcw,
-  Search, Sparkles, Strikethrough, Trash2, Undo2, WandSparkles,
+  Mic, MicOff, Search, Sparkles, Strikethrough, Trash2, Undo2, WandSparkles,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useAssemblyAIStreaming } from "@/hooks/use-assemblyai-streaming";
 import {
   createNote, duplicateNote, permanentlyDeleteNote, renameNote, restoreNote, saveNote,
   setNotePinned, trashNote, updateNoteColor,
@@ -87,6 +88,7 @@ function NoteEditor({ note, onBack }: { note: FullNote; onBack: () => void }) {
   const [message, setMessage] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const titleRef = useRef(title);
+  const voicePositionRef = useRef<number | null>(null);
   titleRef.current = title;
   const editor = useEditor({
     immediatelyRender: false,
@@ -95,6 +97,16 @@ function NoteEditor({ note, onBack }: { note: FullNote; onBack: () => void }) {
     editorProps: { attributes: { class: "notes-prose min-h-[55vh] outline-none" } },
     onUpdate: ({ editor }) => { scheduleSave(editor); const before = editor.state.doc.textBetween(Math.max(0, editor.state.selection.from - 1), editor.state.selection.from); setSlashOpen(before === "/"); },
   });
+  const insertVoiceTranscript = useCallback((transcript: string) => {
+    if (!editor || editor.isDestroyed) return;
+    const documentEnd = Math.max(1, editor.state.doc.content.size - 1);
+    const position = Math.min(voicePositionRef.current ?? documentEnd, documentEnd);
+    const previousCharacter = editor.state.doc.textBetween(Math.max(0, position - 1), position, " ");
+    const content = `${previousCharacter && !/\s$/.test(previousCharacter) ? " " : ""}${transcript}`;
+    editor.commands.insertContentAt(position, content, { updateSelection: true });
+    voicePositionRef.current = position + content.length;
+  }, [editor]);
+  const voice = useAssemblyAIStreaming({ onFinalTranscript: insertVoiceTranscript });
 
   function persist(activeEditor = editor) {
     if (!activeEditor) return;
@@ -149,8 +161,18 @@ function NoteEditor({ note, onBack }: { note: FullNote; onBack: () => void }) {
     } catch (error) { setMessage(error instanceof Error ? error.message : "AI Refine failed."); }
     finally { setAiPending(false); }
   }
+  function toggleRecording() {
+    if (!editor) return;
+    if (voice.status === "connecting" || voice.status === "recording" || voice.status === "stopping") {
+      voice.stopRecording();
+      return;
+    }
+    voicePositionRef.current = editor.isFocused ? editor.state.selection.from : Math.max(1, editor.state.doc.content.size - 1);
+    void voice.startRecording();
+  }
+  const voiceActive = voice.status === "connecting" || voice.status === "recording" || voice.status === "stopping";
   return <div className="relative flex min-h-0 flex-1 flex-col bg-[#fffdfa]">
-    <header className="border-b border-stone-200/80 px-4 py-4 sm:px-7"><div className="mx-auto flex max-w-5xl items-center gap-3"><button onClick={() => { persist(); onBack(); }} className="flex h-9 items-center gap-1 rounded-lg border border-stone-200 px-2 text-xs font-medium lg:hidden"><ArrowLeft className="h-4 w-4" />Notes</button><span className="h-3 w-3 rounded-full" style={{ backgroundColor: note.color }} /><input value={title} maxLength={160} onChange={(event) => { setTitle(event.target.value); titleRef.current = event.target.value; scheduleSave(); }} onBlur={() => persist()} className="min-w-0 flex-1 bg-transparent text-xl font-semibold outline-none sm:text-2xl" placeholder="Untitled note" /><span className={`shrink-0 text-xs ${status === "error" ? "text-rose-600" : "text-stone-400"}`}>{status === "saving" ? "Saving..." : status === "error" ? "Save failed" : <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-emerald-600" />Saved</span>}</span></div></header>
+    <header className="border-b border-stone-200/80 px-4 py-4 sm:px-7"><div className="mx-auto flex max-w-5xl items-center gap-3"><button onClick={() => { voice.stopRecording(); persist(); onBack(); }} className="flex h-9 items-center gap-1 rounded-lg border border-stone-200 px-2 text-xs font-medium lg:hidden"><ArrowLeft className="h-4 w-4" />Notes</button><span className="h-3 w-3 rounded-full" style={{ backgroundColor: note.color }} /><input value={title} maxLength={160} onChange={(event) => { setTitle(event.target.value); titleRef.current = event.target.value; scheduleSave(); }} onBlur={() => persist()} className="min-w-0 flex-1 bg-transparent text-xl font-semibold outline-none sm:text-2xl" placeholder="Untitled note" /><button onMouseDown={(event) => event.preventDefault()} onClick={toggleRecording} disabled={voice.status === "stopping"} aria-label={voiceActive ? "Stop Recording" : "Speak to Note"} className={`flex h-9 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-semibold transition disabled:opacity-60 ${voiceActive ? "bg-rose-100 text-rose-700" : "border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"}`}>{voiceActive ? <MicOff className={`h-4 w-4 ${voice.status === "recording" ? "animate-pulse" : ""}`} /> : <Mic className="h-4 w-4" />}<span className="hidden sm:inline">{voiceActive ? voice.status === "stopping" ? "Stopping..." : "Stop Recording" : "Speak to Note"}</span></button><span className={`shrink-0 text-xs ${status === "error" ? "text-rose-600" : "text-stone-400"}`}>{status === "saving" ? "Saving..." : status === "error" ? "Save failed" : <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-emerald-600" />Saved</span>}</span></div></header>
     <Toolbar editor={editor} />
     <div className="min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-8"><div onKeyDownCapture={(event) => {
       if (!slashOpen) return;
@@ -163,6 +185,7 @@ function NoteEditor({ note, onBack }: { note: FullNote; onBack: () => void }) {
       {aiOpen && <AiMenu pending={aiPending} onRefine={refine} />}
       {slashOpen && <div className="absolute left-3 top-8 z-30 grid w-64 gap-1 rounded-xl border border-stone-200 bg-white p-2 shadow-xl">{commands.map((command, index) => <button key={command.label} onClick={() => runSlash(index)} className={`flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${index === slashIndex ? "bg-amber-50 text-amber-900" : "hover:bg-stone-50"}`}><command.icon className="h-4 w-4 text-stone-500" />{command.label}</button>)}</div>}
       {message && <button onClick={() => setMessage("")} className="mb-4 w-full rounded-xl bg-rose-50 p-3 text-left text-sm text-rose-700">{message}</button>}
+      {(voiceActive || voice.error) && <div className={`mb-5 rounded-2xl border p-3 shadow-sm ${voice.error ? "border-rose-200 bg-rose-50 text-rose-700" : "border-amber-200 bg-amber-50/80 text-amber-950"}`}><div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">{voice.error ? <MicOff className="h-4 w-4" /> : <span className="relative flex h-3 w-3"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-60" /><span className="relative inline-flex h-3 w-3 rounded-full bg-rose-500" /></span>}{voice.error ? "Speak to Note" : voice.status === "connecting" ? "Connecting microphone..." : voice.status === "stopping" ? "Finishing recording..." : "Listening..."}</div>{voice.error ? <p className="mt-2 text-sm leading-6">{voice.error}</p> : <p className={`mt-2 min-h-6 text-sm leading-6 ${voice.preview ? "text-stone-700" : "italic text-stone-400"}`}>{voice.preview || "Start speaking. Your live transcript will appear here."}</p>}</div>}
       <EditorContent editor={editor} />
     </div></div>
     <footer className="border-t border-stone-200/80 px-5 py-2 text-right text-xs text-stone-400">{editor.storage.characterCount.words()} words</footer>
