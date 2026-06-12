@@ -79,8 +79,8 @@
 }
 
 .dark {
-  --app-surface: #191612;
-  --background: hsl(31 20% 9%);
+  --app-surface: #211d18;
+  --background: hsl(30 16% 12%);
   --foreground: hsl(36 42% 94%);
   --card: hsl(30 18% 13%);
   --card-foreground: hsl(36 42% 94%);
@@ -99,6 +99,49 @@
   --border: hsl(28 14% 24%);
   --input: hsl(28 14% 24%);
   --ring: hsl(42 88% 62%);
+}
+
+/* The app predates theme variants, so map its common light utilities onto cozy dark surfaces. */
+.dark body,
+.dark main {
+  color: hsl(36 42% 94%);
+}
+
+.dark .bg-white,
+.dark [class*="bg-white/"],
+.dark [class*="bg-[#fff"],
+.dark [class*="bg-stone-50"],
+.dark [class*="bg-stone-100"] {
+  background-color: hsl(30 18% 15%) !important;
+}
+
+.dark [class*="border-stone-100"],
+.dark [class*="border-stone-200"],
+.dark [class*="border-stone-300"] {
+  border-color: hsl(28 14% 27%) !important;
+}
+
+.dark .text-stone-950,
+.dark .text-stone-900,
+.dark .text-stone-800,
+.dark .text-stone-700,
+.dark .text-stone-600 {
+  color: hsl(36 30% 90%) !important;
+}
+
+.dark .text-stone-500,
+.dark .text-stone-400 {
+  color: hsl(34 14% 68%) !important;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+  color: hsl(36 30% 92%);
+}
+
+.dark .notes-prose {
+  color: hsl(36 30% 92%);
 }
 
 @layer base {

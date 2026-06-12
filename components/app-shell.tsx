@@ -17,6 +17,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { applyTheme } from "@/lib/theme-client";
 
 type NavItem = { label: string; href: string; icon: LucideIcon; color: string };
 
@@ -45,8 +46,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
-    // Existing workspace surfaces are light-only; prevent stale or system-applied dark mode.
-    document.documentElement.classList.remove("dark");
+    let theme = "system";
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const syncSystem = () => { if (theme === "system") applyTheme(theme); };
+    fetch("/api/settings/preferences").then((response) => response.ok ? response.json() : null).then((data) => {
+      theme = data?.theme || "system";
+      applyTheme(theme);
+    }).catch(() => applyTheme(theme));
+    media.addEventListener("change", syncSystem);
+    return () => media.removeEventListener("change", syncSystem);
   }, []);
 
   return (
