@@ -36,7 +36,7 @@ export const taskCategories = pgTable(
 
 export const userSettings = pgTable("user_settings", {
   ownerId: text("owner_id").primaryKey(),
-  theme: text("theme").notNull().default("system"),
+  theme: text("theme").notNull().default("light"),
   notifyReminders: boolean("notify_reminders").notNull().default(true),
   notifyDailySummary: boolean("notify_daily_summary").notNull().default(false),
   notifyCollaboration: boolean("notify_collaboration").notNull().default(true),

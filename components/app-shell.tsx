@@ -46,11 +46,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
-    let theme = "system";
+    let theme = "light";
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const syncSystem = () => { if (theme === "system") applyTheme(theme); };
     fetch("/api/settings/preferences").then((response) => response.ok ? response.json() : null).then((data) => {
-      theme = data?.theme || "system";
+      theme = data?.theme || "light";
       applyTheme(theme);
     }).catch(() => applyTheme(theme));
     media.addEventListener("change", syncSystem);
