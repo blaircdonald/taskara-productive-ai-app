@@ -62,7 +62,21 @@
       "idx": 8,
       "version": "7",
       "when": 1781373000000,
-      "tag": "0008_light_theme_default",
+      "tag": "0009_light_theme_default",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1781380000000,
+      "tag": "0010_ai_assistant",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781383600000,
+      "tag": "0011_user_activity",
       "breakpoints": true
     }
   ]

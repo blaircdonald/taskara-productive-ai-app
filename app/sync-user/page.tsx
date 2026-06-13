@@ -10,5 +10,5 @@ export default async function SyncUserPage() {
     redirect("/sign-in");
   }
 
-  redirect("/");
+  redirect("/dashboard");
 }

@@ -13,7 +13,7 @@ const defaultCategories = [
   { name: "Wellbeing", color: "#db2777", icon: "heart" },
 ];
 
-export default async function CalendarPage() {
+export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ create?: string }> }) {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
@@ -37,5 +37,6 @@ export default async function CalendarPage() {
     }).from(calendarItems).innerJoin(taskCategories, and(eq(calendarItems.categoryId, taskCategories.id), eq(taskCategories.ownerId, userId))).leftJoin(kanbanTasks, and(eq(kanbanTasks.calendarItemId, calendarItems.id), eq(kanbanTasks.ownerId, userId))).where(eq(calendarItems.ownerId, userId)).orderBy(asc(calendarItems.scheduledDate), asc(calendarItems.scheduledTime)),
   ]);
 
-  return <AppShell><CalendarWorkspace initialItems={itemRows} categories={categories} defaultView={settings.defaultCalendarView === "week" ? "week" : "month"} /></AppShell>;
+  const createKind = (await searchParams).create === "reminder" ? "reminder" : null;
+  return <AppShell><CalendarWorkspace initialItems={itemRows} categories={categories} defaultView={settings.defaultCalendarView === "week" ? "week" : "month"} createKind={createKind} /></AppShell>;
 }

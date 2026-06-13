@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { and, asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { calendarItems, db, kanbanTaskLabels, kanbanTasks, taskCategories } from "@/db";
+import { recordActivity } from "@/lib/activity";
 
 const colorPattern = /^#[0-9a-fA-F]{6}$/;
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
@@ -71,7 +72,7 @@ export async function createCalendarItem(input: {
   const category = await db.select().from(taskCategories).where(and(eq(taskCategories.id, categoryId), eq(taskCategories.ownerId, owner))).limit(1);
   if (!category.length || category[0].scope !== (input.kind === "reminder" ? "reminders" : "calendar")) throw new Error("Invalid category.");
 
-  await db.insert(calendarItems).values({
+  const [item] = await db.insert(calendarItems).values({
     ownerId: owner,
     title,
     kind: input.kind,
@@ -79,7 +80,8 @@ export async function createCalendarItem(input: {
     scheduledDate: input.scheduledDate || null,
     scheduledTime: input.scheduledTime ? `${input.scheduledTime}:00` : null,
     categoryId,
-  });
+  }).returning({ id: calendarItems.id });
+  await recordActivity({ actorId: owner, feature: "calendar", action: "created", entityType: input.kind, entityId: item.id, title, href: "/calendar" });
   revalidatePath("/calendar");
 }
 
@@ -112,6 +114,7 @@ export async function updateCalendarItem(itemId: number, input: {
     updatedAt: new Date(),
   }).where(and(eq(calendarItems.id, itemId), eq(calendarItems.ownerId, owner))).returning({ id: calendarItems.id });
   if (!result.length) throw new Error("Item not found.");
+  await recordActivity({ actorId: owner, feature: "calendar", action: "updated", entityType: input.kind, entityId: itemId, title, href: "/calendar", coalesce: true });
   revalidatePath("/calendar");
   revalidatePath("/kanban");
 }
@@ -124,6 +127,8 @@ export async function rescheduleCalendarItem(itemId: number, scheduledDate: stri
   const result = await db.update(calendarItems).set({ scheduledDate, updatedAt: new Date() }).where(and(eq(calendarItems.id, itemId), eq(calendarItems.ownerId, owner))).returning({ id: calendarItems.id });
   if (!result.length) throw new Error("Item not found.");
   if (task && scheduledDate) await db.update(kanbanTasks).set({ dueDate: scheduledDate, updatedAt: new Date() }).where(and(eq(kanbanTasks.id, task.id), eq(kanbanTasks.ownerId, owner)));
+  const item = (await db.select({ title: calendarItems.title, kind: calendarItems.kind }).from(calendarItems).where(and(eq(calendarItems.id, itemId), eq(calendarItems.ownerId, owner))).limit(1))[0];
+  if (item) await recordActivity({ actorId: owner, feature: "calendar", action: "updated", entityType: item.kind, entityId: itemId, title: item.title, href: "/calendar", coalesce: true });
   revalidatePath("/calendar");
   revalidatePath("/kanban");
 }

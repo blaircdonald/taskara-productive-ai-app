@@ -4,8 +4,8 @@ import "@liveblocks/react-ui/styles.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Taskara",
-  description: "A cozy productivity workspace for tasks, notes, whiteboards, and AI-assisted planning.",
+  title: "Taskara | Your AI-Powered Productivity Workspace",
+  description: "Bring notes, tasks, whiteboards, calendar planning, AI assistance, and real-time collaboration into one calm productivity workspace.",
 };
 
 export default function RootLayout({

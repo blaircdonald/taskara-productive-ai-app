@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db, pageFavorites, pages, spaceActivity, spaceFavorites, spaceMembers, spaces } from "@/db";
 import { contentForTemplate, pageTemplates, type PageTemplate } from "@/lib/page-templates";
 import { accessiblePage, accessibleSpace, currentActor, ownerSpace } from "@/lib/spaces-access";
+import { recordActivity } from "@/lib/activity";
 
 const colorPattern = /^#[0-9a-fA-F]{6}$/;
 const refresh = () => revalidatePath("/spaces", "layout");
@@ -26,6 +27,7 @@ const validTemplate = (value: string): PageTemplate => {
 export async function createSpace(input: { name: string; description: string; color: string }) {
   const actor = await currentActor();
   const [space] = await db.insert(spaces).values({ ownerId: actor.clerkId, name: validName(input.name, "Space name"), description: validDescription(input.description), color: validColor(input.color) }).returning({ id: spaces.id });
+  await recordActivity({ actorId: actor.clerkId, feature: "spaces", action: "created", entityType: "space", entityId: space.id, title: input.name, href: `/spaces/${space.id}` });
   refresh();
   return space.id;
 }
@@ -100,6 +102,7 @@ export async function createPage(spaceId: number, input: { name: string; descrip
   if (space.archivedAt) throw new Error("Restore this space before adding pages.");
   const template = validTemplate(input.template);
   const [page] = await db.insert(pages).values({ spaceId, name: validName(input.name, "Page name"), description: validDescription(input.description), template, content: contentForTemplate(template), createdBy: actor.clerkId, updatedBy: actor.clerkId }).returning({ id: pages.id });
+  await recordActivity({ actorId: actor.clerkId, feature: "spaces", action: "created", entityType: "page", entityId: page.id, title: input.name, href: `/spaces/${spaceId}/pages/${page.id}` });
   await db.update(spaces).set({ updatedAt: new Date() }).where(eq(spaces.id, spaceId));
   refresh();
   return page.id;
@@ -112,6 +115,7 @@ export async function savePage(pageId: number, input: { name: string; descriptio
   if (!input.content || typeof input.content !== "object") throw new Error("Page content is invalid.");
   await db.update(pages).set({ name: validName(input.name, "Page name"), description: validDescription(input.description), content: input.content, updatedBy: actor.clerkId, updatedAt: new Date() }).where(eq(pages.id, pageId));
   await db.update(spaces).set({ updatedAt: new Date() }).where(eq(spaces.id, page.spaceId));
+  await recordActivity({ actorId: actor.clerkId, feature: "spaces", action: "updated", entityType: "page", entityId: pageId, title: input.name, href: `/spaces/${page.spaceId}/pages/${pageId}`, coalesce: true });
 }
 
 export async function movePage(pageId: number, destinationSpaceId: number) {

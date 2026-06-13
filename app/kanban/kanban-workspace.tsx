@@ -25,7 +25,7 @@ type TaskDraft = { title: string; description: string; dueDate: string; priority
 const pad = (value: number) => String(value).padStart(2, "0");
 const today = () => { const date = new Date(); return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`; };
 const priorityStyle: Record<string, string> = { low: "bg-emerald-100 text-emerald-700", medium: "bg-amber-100 text-amber-700", high: "bg-rose-100 text-rose-700" };
-type WorkspaceProps = { boards: Board[]; selectedBoardId: number | null; columns: Column[]; tasks: Task[]; labels: Label[]; collaborators: Collaborator[]; defaultPriority: string };
+type WorkspaceProps = { boards: Board[]; selectedBoardId: number | null; columns: Column[]; tasks: Task[]; labels: Label[]; collaborators: Collaborator[]; defaultPriority: string; createTaskIntent?: boolean };
 
 export function KanbanWorkspace(props: WorkspaceProps) {
   if (!props.selectedBoardId) return <KanbanWorkspaceContent {...props} />;
@@ -55,7 +55,7 @@ function LiveBoardRefresh() {
   return null;
 }
 
-function KanbanWorkspaceContent({ boards, selectedBoardId, columns: initialColumns, tasks: initialTasks, labels: initialLabels, collaborators, defaultPriority }: WorkspaceProps) {
+function KanbanWorkspaceContent({ boards, selectedBoardId, columns: initialColumns, tasks: initialTasks, labels: initialLabels, collaborators, defaultPriority, createTaskIntent }: WorkspaceProps) {
   const router = useRouter();
   const [tasks, setTasks] = useState(initialTasks);
   const [labels, setLabels] = useState(initialLabels);
@@ -81,6 +81,12 @@ function KanbanWorkspaceContent({ boards, selectedBoardId, columns: initialColum
     const timeout = window.setTimeout(() => setMessage(""), 5000);
     return () => window.clearTimeout(timeout);
   }, [message]);
+  useEffect(() => {
+    if (!createTaskIntent) return;
+    if (initialColumns[0]) setTaskDialog({ columnId: initialColumns[0].id });
+    else setMessage("Create a Kanban board before adding your first task.");
+    window.history.replaceState(null, "", selectedBoardId ? `/kanban?board=${selectedBoardId}` : "/kanban");
+  }, [createTaskIntent, initialColumns, selectedBoardId]);
 
   useEffect(() => {
     setTasks(initialTasks);
