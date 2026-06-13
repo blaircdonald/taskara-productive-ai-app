@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Bot, CalendarDays, Check, CheckSquare, FileText, LayoutTemplate, Menu, MessageSquarePlus, Mic, MicOff, MoreHorizontal, PenTool, Sparkles, StickyNote, Trash2, X } from "lucide-react";
+import { ArrowUp, Bot, CalendarDays, Check, CheckSquare, LayoutTemplate, Menu, MessageSquarePlus, Mic, MicOff, MoreHorizontal, Sparkles, StickyNote, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { assistantTools } from "@/lib/assistant-client";
@@ -17,7 +17,6 @@ const suggestions = [
   ["Summarize my notes", StickyNote],
   ["Create a Kanban board", LayoutTemplate],
   ["Plan my week", Sparkles],
-  ["Generate a habit tracker template", FileText],
 ] as const;
 
 export function AssistantWorkspace({ initialThreads, initialPrompt = "" }: { initialThreads: Thread[]; initialPrompt?: string }) {
