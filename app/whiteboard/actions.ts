@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db, whiteboards } from "@/db";
+import { recordActivity } from "@/lib/activity";
 
 const colorPattern = /^#[0-9a-fA-F]{6}$/;
 
@@ -36,6 +37,7 @@ const refresh = () => revalidatePath("/whiteboard");
 export async function createWhiteboard() {
   const owner = await ownerId();
   const [board] = await db.insert(whiteboards).values({ ownerId: owner }).returning({ id: whiteboards.id });
+  await recordActivity({ actorId: owner, feature: "whiteboard", action: "created", entityType: "whiteboard", entityId: board.id, title: "Untitled whiteboard", href: `/whiteboard?board=${board.id}` });
   refresh();
   return board.id;
 }
@@ -45,6 +47,8 @@ export async function renameWhiteboard(boardId: number, name: string) {
   const result = await db.update(whiteboards).set({ name: validName(name), updatedAt: new Date() })
     .where(and(eq(whiteboards.id, boardId), eq(whiteboards.ownerId, owner))).returning({ id: whiteboards.id });
   if (!result.length) throw new Error("Whiteboard not found.");
+  const board = (await db.select({ name: whiteboards.name }).from(whiteboards).where(and(eq(whiteboards.id, boardId), eq(whiteboards.ownerId, owner))).limit(1))[0];
+  if (board) await recordActivity({ actorId: owner, feature: "whiteboard", action: "updated", entityType: "whiteboard", entityId: boardId, title: board.name, href: `/whiteboard?board=${boardId}`, coalesce: true });
   refresh();
 }
 
@@ -62,6 +66,8 @@ export async function saveWhiteboard(boardId: number, input: { elements: unknown
   const result = await db.update(whiteboards).set({ ...scene, updatedAt: new Date() })
     .where(and(eq(whiteboards.id, boardId), eq(whiteboards.ownerId, owner))).returning({ id: whiteboards.id });
   if (!result.length) throw new Error("Whiteboard not found.");
+  const board = (await db.select({ name: whiteboards.name }).from(whiteboards).where(and(eq(whiteboards.id, boardId), eq(whiteboards.ownerId, owner))).limit(1))[0];
+  if (board) await recordActivity({ actorId: owner, feature: "whiteboard", action: "updated", entityType: "whiteboard", entityId: boardId, title: board.name, href: `/whiteboard?board=${boardId}`, coalesce: true });
 }
 
 export async function clearWhiteboard(boardId: number) {

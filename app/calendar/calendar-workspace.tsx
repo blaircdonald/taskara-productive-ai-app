@@ -64,7 +64,7 @@ const monthDays = (date: Date) => {
 const weekDays = (date: Date) => Array.from({ length: 7 }, (_, index) => addDays(startOfWeek(date), index));
 const categoryIconMap = { briefcase: Briefcase, home: Home, heart: Heart, lightbulb: Lightbulb, bell: Bell, "calendar-days": CalendarDays, tag: Tag };
 
-export function CalendarWorkspace({ initialItems, categories, defaultView }: { initialItems: Item[]; categories: Category[]; defaultView: View }) {
+export function CalendarWorkspace({ initialItems, categories, defaultView, createKind }: { initialItems: Item[]; categories: Category[]; defaultView: View; createKind: "reminder" | null }) {
   const [items, setItems] = useState(initialItems);
   const [cursor, setCursor] = useState(() => new Date());
   const [view, setView] = useState<View>(defaultView);
@@ -82,6 +82,12 @@ export function CalendarWorkspace({ initialItems, categories, defaultView }: { i
     const timeout = window.setTimeout(() => setMessage(""), 5000);
     return () => window.clearTimeout(timeout);
   }, [message]);
+  useEffect(() => {
+    if (createKind === "reminder") {
+      setDialogDate(dateKey(new Date()));
+      window.history.replaceState(null, "", "/calendar");
+    }
+  }, [createKind]);
 
   function move(amount: number) {
     setCursor((current) => view === "month" ? new Date(current.getFullYear(), current.getMonth() + amount, 1) : addDays(current, amount * 7));
@@ -139,7 +145,7 @@ export function CalendarWorkspace({ initialItems, categories, defaultView }: { i
         <DraftPanel items={items.filter((item) => !item.scheduledDate)} onAdd={() => setDialogDate(null)} />
       </div>
     </div>
-    {dialogDate !== undefined && <TaskDialog initialDate={dialogDate} categories={categories} onClose={() => setDialogDate(undefined)} onSaved={() => window.location.reload()} />}
+    {dialogDate !== undefined && <TaskDialog initialDate={dialogDate} categories={categories} initialKind={createKind ?? "task"} onClose={() => setDialogDate(undefined)} onSaved={() => window.location.reload()} />}
     {editingItem && <TaskDialog item={editingItem} initialDate={editingItem.scheduledDate} categories={categories} onClose={() => setEditingItem(null)} onSaved={() => window.location.reload()} />}
     <DragOverlay>{activeItem ? <ItemCard item={activeItem} overlay /> : null}</DragOverlay>
   </DndContext>;
@@ -174,11 +180,11 @@ function DraftPanel({ items, onAdd }: { items: Item[]; onAdd: () => void }) {
   </aside>;
 }
 
-function TaskDialog({ initialDate, categories, item, onClose, onSaved }: { initialDate: string | null; categories: Category[]; item?: Item; onClose: () => void; onSaved: () => void }) {
+function TaskDialog({ initialDate, categories, item, initialKind = "task", onClose, onSaved }: { initialDate: string | null; categories: Category[]; item?: Item; initialKind?: "task" | "reminder"; onClose: () => void; onSaved: () => void }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [custom, setCustom] = useState(false);
-  const [kind, setKind] = useState<"task" | "reminder">(item?.kind === "reminder" ? "reminder" : "task");
+  const [kind, setKind] = useState<"task" | "reminder">(item?.kind === "reminder" ? "reminder" : initialKind);
   const availableCategories = categories.filter((category) => category.scope === (kind === "reminder" ? "reminders" : "calendar"));
   async function submit(formData: FormData, draft: boolean) {
     setSaving(true); setError("");

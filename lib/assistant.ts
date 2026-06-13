@@ -21,6 +21,7 @@ import {
 import { accessibleBoard, accessibleColumn, accessibleBoards, currentActor } from "@/lib/kanban-access";
 import { accessibleSpace, accessibleSpaces } from "@/lib/spaces-access";
 import { getUserSettings } from "@/lib/settings";
+import { recordActivity } from "@/lib/activity";
 
 export type AssistantResult = {
   title: string;
@@ -126,6 +127,7 @@ export async function saveAssistantMessage(ownerId: string, threadId: number, ro
   await ownedThread(ownerId, threadId);
   const [message] = await db.insert(assistantMessages).values({ ownerId, threadId, role, content: content.trim(), source, metadata }).returning();
   await db.update(assistantThreads).set({ updatedAt: new Date() }).where(and(eq(assistantThreads.id, threadId), eq(assistantThreads.ownerId, ownerId)));
+  if (role === "user") await recordActivity({ actorId: ownerId, feature: "assistant", action: "updated", entityType: "assistant-thread", entityId: threadId, title: content.slice(0, 100), href: "/assistant", coalesce: true });
   return message;
 }
 

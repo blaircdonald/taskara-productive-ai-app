@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db, notes, taskCategories } from "@/db";
+import { recordActivity } from "@/lib/activity";
 
 const colorPattern = /^#[0-9a-fA-F]{6}$/;
 const emptyDocument = { type: "doc", content: [{ type: "paragraph" }] };
@@ -30,6 +31,7 @@ const refresh = () => revalidatePath("/notes");
 export async function createNote() {
   const owner = await ownerId();
   const [note] = await db.insert(notes).values({ ownerId: owner, content: emptyDocument }).returning({ id: notes.id });
+  await recordActivity({ actorId: owner, feature: "notes", action: "created", entityType: "note", entityId: note.id, title: "Untitled note", href: `/notes?note=${note.id}` });
   refresh();
   return note.id;
 }
@@ -39,6 +41,7 @@ export async function saveNote(noteId: number, input: { title: string; content: 
   if (!input.content || typeof input.content !== "object") throw new Error("The note content is invalid.");
   const result = await db.update(notes).set({ title: validTitle(input.title), content: input.content, updatedAt: new Date() }).where(and(eq(notes.id, noteId), eq(notes.ownerId, owner), isNull(notes.trashedAt))).returning({ id: notes.id });
   if (!result.length) throw new Error("Note not found.");
+  await recordActivity({ actorId: owner, feature: "notes", action: "updated", entityType: "note", entityId: noteId, title: validTitle(input.title), href: `/notes?note=${noteId}`, coalesce: true });
 }
 
 export async function renameNote(noteId: number, title: string) {

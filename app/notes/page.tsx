@@ -5,11 +5,13 @@ import { AppShell } from "@/components/app-shell";
 import { db, notes, taskCategories } from "@/db";
 import { getUserSettings } from "@/lib/settings";
 import { NotesWorkspace } from "./notes-workspace";
+import { createNote } from "./actions";
 
-export default async function NotesPage({ searchParams }: { searchParams: Promise<{ note?: string; trash?: string }> }) {
+export default async function NotesPage({ searchParams }: { searchParams: Promise<{ note?: string; trash?: string; create?: string }> }) {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
   const params = await searchParams;
+  if (params.create === "1") redirect(`/notes?note=${await createNote()}`);
   const settings = await getUserSettings(userId);
   const categories = await db.select().from(taskCategories).where(and(eq(taskCategories.ownerId, userId), eq(taskCategories.scope, "notes")));
   const summaries = await db.select({
