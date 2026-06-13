@@ -25,7 +25,7 @@ const groups: { label: string; items: NavItem[] }[] = [
   {
     label: "Workspace",
     items: [
-      { label: "Dashboard", href: "/", icon: LayoutDashboard, color: "#d97706" },
+      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, color: "#d97706" },
       { label: "AI Assistant", href: "/assistant", icon: Bot, color: "#7c3aed" },
       { label: "Calendar", href: "/calendar", icon: CalendarDays, color: "#0f766e" },
       { label: "Task / Kanban", href: "/kanban", icon: CheckSquare, color: "#2563eb" },
