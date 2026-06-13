@@ -36,7 +36,7 @@ export const taskCategories = pgTable(
 
 export const userSettings = pgTable("user_settings", {
   ownerId: text("owner_id").primaryKey(),
-  theme: text("theme").notNull().default("system"),
+  theme: text("theme").notNull().default("light"),
   notifyReminders: boolean("notify_reminders").notNull().default(true),
   notifyDailySummary: boolean("notify_daily_summary").notNull().default(false),
   notifyCollaboration: boolean("notify_collaboration").notNull().default(true),
@@ -226,6 +226,46 @@ export const spaceActivity = pgTable("space_activity", {
   index("space_activity_user_opened_idx").on(table.userId, table.openedAt),
 ]);
 
+export const assistantThreads = pgTable("assistant_threads", {
+  id: serial("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  title: text("title").notNull().default("New conversation"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("assistant_threads_owner_updated_idx").on(table.ownerId, table.updatedAt),
+]);
+
+export const assistantMessages = pgTable("assistant_messages", {
+  id: serial("id").primaryKey(),
+  threadId: integer("thread_id").notNull().references(() => assistantThreads.id, { onDelete: "cascade" }),
+  ownerId: text("owner_id").notNull(),
+  role: text("role").notNull(),
+  content: text("content").notNull(),
+  source: text("source").notNull().default("text"),
+  metadata: jsonb("metadata").notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("assistant_messages_thread_created_idx").on(table.threadId, table.createdAt),
+  index("assistant_messages_owner_idx").on(table.ownerId),
+]);
+
+export const assistantActionRequests = pgTable("assistant_action_requests", {
+  id: serial("id").primaryKey(),
+  threadId: integer("thread_id").notNull().references(() => assistantThreads.id, { onDelete: "cascade" }),
+  ownerId: text("owner_id").notNull(),
+  action: text("action").notNull(),
+  arguments: jsonb("arguments").notNull(),
+  summary: text("summary").notNull(),
+  status: text("status").notNull().default("pending"),
+  result: jsonb("result"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  resolvedAt: timestamp("resolved_at"),
+}, (table) => [
+  index("assistant_action_requests_owner_status_idx").on(table.ownerId, table.status),
+  index("assistant_action_requests_thread_idx").on(table.threadId),
+]);
+
 export type TaskCategory = typeof taskCategories.$inferSelect;
 export type UserSettings = typeof userSettings.$inferSelect;
 export type CalendarItem = typeof calendarItems.$inferSelect;
@@ -237,3 +277,6 @@ export type Note = typeof notes.$inferSelect;
 export type Whiteboard = typeof whiteboards.$inferSelect;
 export type Space = typeof spaces.$inferSelect;
 export type Page = typeof pages.$inferSelect;
+export type AssistantThread = typeof assistantThreads.$inferSelect;
+export type AssistantMessage = typeof assistantMessages.$inferSelect;
+export type AssistantActionRequest = typeof assistantActionRequests.$inferSelect;
