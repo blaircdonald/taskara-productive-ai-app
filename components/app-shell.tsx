@@ -26,7 +26,7 @@ const groups: { label: string; items: NavItem[] }[] = [
     label: "Workspace",
     items: [
       { label: "Dashboard", href: "/", icon: LayoutDashboard, color: "#d97706" },
-      { label: "AI Assistant", href: "#", icon: Bot, color: "#7c3aed" },
+      { label: "AI Assistant", href: "/assistant", icon: Bot, color: "#7c3aed" },
       { label: "Calendar", href: "/calendar", icon: CalendarDays, color: "#0f766e" },
       { label: "Task / Kanban", href: "/kanban", icon: CheckSquare, color: "#2563eb" },
     ],
@@ -46,11 +46,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
-    let theme = "system";
+    let theme = "light";
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const syncSystem = () => { if (theme === "system") applyTheme(theme); };
     fetch("/api/settings/preferences").then((response) => response.ok ? response.json() : null).then((data) => {
-      theme = data?.theme || "system";
+      theme = data?.theme || "light";
       applyTheme(theme);
     }).catch(() => applyTheme(theme));
     media.addEventListener("change", syncSystem);
