@@ -3,7 +3,7 @@
 import { UserProfile } from "@clerk/nextjs";
 import {
   Bell, Bookmark, Briefcase, CalendarDays, Check, Circle, Download, Flag, Folder, Heart, Home,
-  Lightbulb, Lock, Palette, Pencil, Plus, Save, ShieldCheck, Sparkles, Star, Tag, Trash2, UserRound, WalletCards, X,
+  Lightbulb, Lock, Palette, Pencil, Plus, Save, ShieldCheck, Sparkles, Star, Tag, Trash2, UserRound, X,
 } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition, type ComponentType } from "react";
 import type { TaskCategory, UserSettings } from "@/db";
@@ -11,22 +11,21 @@ import { aiBehaviors, aiModels, aiTones, categoryIcons, categoryScopes } from "@
 import { applyTheme } from "@/lib/theme-client";
 import { createCategory, deleteCategory, updateCategory, updatePreferences } from "./actions";
 
-type Section = "profile" | "subscription" | "categories" | "ai" | "preferences" | "privacy";
+type Section = "profile" | "categories" | "ai" | "preferences" | "privacy";
 type CategoryScope = typeof categoryScopes[number];
 type IconComponent = ComponentType<{ className?: string }>;
 const iconMap: Record<string, IconComponent> = { tag: Tag, "calendar-days": CalendarDays, bell: Bell, briefcase: Briefcase, home: Home, heart: Heart, star: Star, bookmark: Bookmark, flag: Flag, lightbulb: Lightbulb, folder: Folder, circle: Circle };
 const scopeLabels: Record<CategoryScope, string> = { calendar: "Calendar", kanban: "Tasks / Kanban", notes: "Notes", reminders: "Reminders" };
 const nav: { id: Section; label: string; icon: IconComponent }[] = [
-  { id: "profile", label: "Profile", icon: UserRound }, { id: "subscription", label: "Subscription", icon: WalletCards },
+  { id: "profile", label: "Profile", icon: UserRound },
   { id: "categories", label: "Categories", icon: Tag }, { id: "ai", label: "AI settings", icon: Sparkles },
   { id: "preferences", label: "Preferences", icon: Palette }, { id: "privacy", label: "Privacy & security", icon: ShieldCheck },
 ];
 
-export function SettingsWorkspace({ profile, settings, categories: initialCategories, usage }: {
+export function SettingsWorkspace({ profile, settings, categories: initialCategories }: {
   profile: { name: string; email: string; avatarUrl: string };
   settings: UserSettings;
   categories: TaskCategory[];
-  usage: Record<string, number>;
 }) {
   const [section, setSection] = useState<Section>("profile");
   const [values, setValues] = useState(settings);
@@ -56,10 +55,6 @@ export function SettingsWorkspace({ profile, settings, categories: initialCatego
       <main className="min-w-0 space-y-5">
         {section === "profile" && <SectionCard icon={UserRound} title="Profile" detail="Your identity across Taskara.">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center"><img src={profile.avatarUrl} alt="" className="h-20 w-20 rounded-2xl object-cover ring-4 ring-amber-100" /><div className="min-w-0 flex-1"><h2 className="truncate text-xl font-semibold">{profile.name}</h2><p className="mt-1 truncate text-sm text-stone-500">{profile.email}</p></div><button onClick={() => setAccountOpen(true)} className={primaryButton}><Pencil className="h-4 w-4" />Manage account</button></div>
-        </SectionCard>}
-        {section === "subscription" && <SectionCard icon={WalletCards} title="Subscription" detail="Your current plan and product usage.">
-          <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">Active</span><h2 className="mt-3 text-2xl font-semibold">Free plan</h2><p className="mt-1 text-sm text-stone-500">No renewal date. Enjoy the core Taskara workspace.</p></div><button disabled className={`${primaryButton} opacity-50`}>Upgrade coming soon</button></div></div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">{Object.entries(usage).map(([label, value]) => <div key={label} className="rounded-xl border border-stone-200 bg-white p-4"><p className="text-2xl font-semibold">{value}</p><p className="mt-1 text-xs capitalize text-stone-500">{label}</p></div>)}</div>
         </SectionCard>}
         {section === "categories" && <SectionCard icon={Tag} title="Categories" detail="Create a separate category library for each part of your workspace.">
           <div className="flex gap-2 overflow-x-auto pb-2">{categoryScopes.map((item) => <button key={item} onClick={() => setScope(item)} className={`h-10 shrink-0 rounded-xl px-3 text-sm font-medium ${scope === item ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-600"}`}>{scopeLabels[item]}</button>)}</div>
