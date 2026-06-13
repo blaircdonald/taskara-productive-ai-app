@@ -14,6 +14,7 @@ import {
 } from "@/db";
 import { accessibleBoard, accessibleColumn, accessibleTask, currentActor, normalizeEmail, ownerBoard, roomIdForBoard } from "@/lib/kanban-access";
 import { liveblocks, liveblocksConfigured } from "@/lib/liveblocks-server";
+import { recordActivity } from "@/lib/activity";
 
 const colorPattern = /^#[0-9a-fA-F]{6}$/;
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
@@ -93,6 +94,7 @@ export async function createBoard(input: { name: string; color: string }) {
   const [board] = await db.insert(kanbanBoards).values({ ownerId: owner, name: nameValue(input.name, "Board name"), color: colorValue(input.color) }).returning();
   await db.insert(kanbanColumns).values(["Todo", "In Progress", "Done"].map((name, position) => ({ ownerId: owner, boardId: board.id, name, position })));
   if (liveblocksConfigured) await liveblocks.getOrCreateRoom(roomIdForBoard(board.id), { defaultAccesses: [], usersAccesses: { [actor.email]: ["room:write"] }, metadata: { boardId: String(board.id), type: "kanban" } });
+  await recordActivity({ actorId: actor.clerkId, feature: "kanban", action: "created", entityType: "board", entityId: board.id, title: board.name, href: `/kanban?board=${board.id}` });
   refresh();
   return board.id;
 }
@@ -176,6 +178,7 @@ export async function createTask(columnId: number, input: TaskInput) {
   if (labels.length) await db.insert(kanbanTaskLabels).values(labels.map((label, position) => ({ taskId: task.id, categoryId: label.id, position })));
   const calendarItemId = await syncCalendar(owner, task, labels, board.isOwner && input.calendarSynced);
   if (calendarItemId) await db.update(kanbanTasks).set({ calendarItemId }).where(eq(kanbanTasks.id, task.id));
+  await recordActivity({ actorId: actor.clerkId, feature: "kanban", action: "created", entityType: "task", entityId: task.id, title: task.title, href: `/kanban?board=${task.boardId}` });
   refresh();
 }
 
@@ -194,6 +197,7 @@ export async function updateTask(taskId: number, input: TaskInput) {
   }
   const calendarItemId = board.isOwner ? await syncCalendar(owner, { ...task, calendarItemId: current.calendarItemId }, labels, input.calendarSynced) : current.calendarItemId;
   await db.update(kanbanTasks).set({ calendarItemId }).where(eq(kanbanTasks.id, taskId));
+  await recordActivity({ actorId: actor.clerkId, feature: "kanban", action: "updated", entityType: "task", entityId: taskId, title: task.title, href: `/kanban?board=${task.boardId}`, coalesce: true });
   refresh();
 }
 

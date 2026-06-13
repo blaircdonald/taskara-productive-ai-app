@@ -20,12 +20,12 @@ const suggestions = [
   ["Generate a habit tracker template", FileText],
 ] as const;
 
-export function AssistantWorkspace({ initialThreads }: { initialThreads: Thread[] }) {
+export function AssistantWorkspace({ initialThreads, initialPrompt = "" }: { initialThreads: Thread[]; initialPrompt?: string }) {
   const [threads, setThreads] = useState(initialThreads);
   const [threadId, setThreadId] = useState<number | null>(initialThreads[0]?.id ?? null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [actions, setActions] = useState<Action[]>([]);
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState(initialPrompt);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -49,6 +49,7 @@ export function AssistantWorkspace({ initialThreads }: { initialThreads: Thread[
   }, []);
 
   useEffect(() => { if (threadId) void loadThread(threadId); }, [loadThread, threadId]);
+  useEffect(() => { if (initialPrompt) window.history.replaceState(null, "", "/assistant"); }, [initialPrompt]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, pending, actions]);
 
   async function newThread() {

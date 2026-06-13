@@ -266,6 +266,22 @@ export const assistantActionRequests = pgTable("assistant_action_requests", {
   index("assistant_action_requests_thread_idx").on(table.threadId),
 ]);
 
+export const userActivity = pgTable("user_activity", {
+  id: serial("id").primaryKey(),
+  actorId: text("actor_id").notNull(),
+  feature: text("feature").notNull(),
+  action: text("action").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  title: text("title").notNull(),
+  href: text("href"),
+  metadata: jsonb("metadata").notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("user_activity_actor_created_idx").on(table.actorId, table.createdAt),
+  index("user_activity_actor_entity_idx").on(table.actorId, table.entityType, table.entityId),
+]);
+
 export type TaskCategory = typeof taskCategories.$inferSelect;
 export type UserSettings = typeof userSettings.$inferSelect;
 export type CalendarItem = typeof calendarItems.$inferSelect;
@@ -280,3 +296,4 @@ export type Page = typeof pages.$inferSelect;
 export type AssistantThread = typeof assistantThreads.$inferSelect;
 export type AssistantMessage = typeof assistantMessages.$inferSelect;
 export type AssistantActionRequest = typeof assistantActionRequests.$inferSelect;
+export type UserActivity = typeof userActivity.$inferSelect;
