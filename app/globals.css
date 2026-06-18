@@ -165,7 +165,7 @@
   }
 }
 
-@keyframes landing-reveal {
+@keyframes taskara-landing-reveal {
   from {
     opacity: 0;
     transform: translateY(14px);
@@ -186,7 +186,7 @@
 }
 
 .landing-reveal {
-  animation: landing-reveal 0.7s both;
+  animation: taskara-landing-reveal 0.7s both;
 }
 
 .landing-reveal:nth-child(2) {
