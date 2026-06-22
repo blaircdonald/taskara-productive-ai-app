@@ -1,5 +1,8 @@
 # dependencies
 /node_modules
+
+# macOS
+.DS_Store
 /.pnp
 .pnp.js
 
@@ -25,6 +28,9 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+
+# macOS metadata
+.DS_Store
 
 # vercel
 .vercel
