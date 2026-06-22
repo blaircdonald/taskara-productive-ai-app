@@ -1,8 +1,8 @@
 "use client";
 
 import {
-  ArrowRight, Bell, Bot, CalendarDays, CheckCircle2, CheckSquare, Clock3, FileText, LayoutDashboard,
-  LayoutTemplate, Lightbulb, ListTodo, PenTool, Plus, Sparkles, StickyNote, TriangleAlert,
+  ArrowRight, Bell, Bot, CalendarDays, CheckSquare, Clock3, FileText, LayoutDashboard,
+  Lightbulb, ListTodo, PenTool, Plus, Sparkles, StickyNote, TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
@@ -14,7 +14,6 @@ const featureStyles = {
   notes: ["bg-amber-100 text-amber-700", StickyNote],
   whiteboard: ["bg-pink-100 text-pink-700", PenTool],
   assistant: ["bg-violet-100 text-violet-700", Bot],
-  templates: ["bg-orange-100 text-orange-700", LayoutTemplate],
 } as const;
 
 const activityIcons = { calendar: CalendarDays, kanban: CheckSquare, notes: StickyNote, whiteboard: PenTool, spaces: FileText, assistant: Bot } as const;
@@ -50,7 +49,6 @@ export function DashboardWorkspace({ data }: { data: DashboardData }) {
     { key: "notes", name: "Notes", href: "/notes", status: "Active", stat: `${data.counts.notes} notes`, detail: "Your thinking space" },
     { key: "whiteboard", name: "Whiteboard", href: "/whiteboard", status: "Active", stat: `${data.counts.whiteboards} boards`, detail: "Visual ideas" },
     { key: "assistant", name: "AI Assistant", href: "/assistant", status: data.aiStatus === "ready" ? "Ready" : data.aiStatus === "disabled" ? "Disabled" : "Setup required", stat: `${data.counts.threads} chats`, detail: `${data.counts.assistantActions} actions` },
-    { key: "templates", name: "AI Template Builder", href: "", status: "Coming soon", stat: "Not available", detail: "In development" },
   ] as const;
   const quickActions = [
     ["Create Task", "/kanban?create=task", CheckSquare, "bg-blue-100 text-blue-700"],
@@ -68,13 +66,13 @@ export function DashboardWorkspace({ data }: { data: DashboardData }) {
     <Section title="App overview" detail="Live status from your workspace">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{features.map((feature) => {
         const [style, Icon] = featureStyles[feature.key];
-        const content = <article className={`h-full rounded-2xl border border-stone-200/80 bg-white/85 p-4 shadow-[0_12px_35px_rgba(120,90,60,0.06)] transition ${feature.href ? "hover:-translate-y-0.5 hover:shadow-md" : "opacity-75"}`}><div className="flex items-start justify-between gap-3"><span className={`flex h-11 w-11 items-center justify-center rounded-xl ${style}`}><Icon className="h-5 w-5" /></span><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${feature.status === "Coming soon" ? "bg-stone-100 text-stone-500" : feature.status === "Ready" || feature.status === "Active" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{feature.status}</span></div><h3 className="mt-4 font-semibold">{feature.name}</h3><div className="mt-3 flex items-end justify-between"><p className="text-xl font-semibold">{feature.stat}</p><p className="text-xs text-stone-500">{feature.detail}</p></div></article>;
-        return feature.href ? <Link key={feature.key} href={feature.href}>{content}</Link> : <div key={feature.key}>{content}</div>;
+        const content = <article className="h-full rounded-2xl border border-stone-200/80 bg-white/85 p-4 shadow-[0_12px_35px_rgba(120,90,60,0.06)] transition hover:-translate-y-0.5 hover:shadow-md"><div className="flex items-start justify-between gap-3"><span className={`flex h-11 w-11 items-center justify-center rounded-xl ${style}`}><Icon className="h-5 w-5" /></span><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${feature.status === "Ready" || feature.status === "Active" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{feature.status}</span></div><h3 className="mt-4 font-semibold">{feature.name}</h3><div className="mt-3 flex items-end justify-between"><p className="text-xl font-semibold">{feature.stat}</p><p className="text-xs text-stone-500">{feature.detail}</p></div></article>;
+        return <Link key={feature.key} href={feature.href}>{content}</Link>;
       })}</div>
     </Section>
 
     <Section title="Quick access" detail="Start something without hunting for it">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">{quickActions.map(([label, href, Icon, style]) => <Link key={label} href={href} className="flex min-h-24 items-center gap-3 rounded-2xl border border-stone-200/80 bg-white/85 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"><span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${style}`}><Icon className="h-5 w-5" /></span><span className="text-sm font-semibold">{label}</span></Link>)}<button disabled className="flex min-h-24 items-center gap-3 rounded-2xl border border-dashed border-stone-300 bg-white/45 p-4 text-left opacity-65"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-700"><LayoutTemplate className="h-5 w-5" /></span><span><span className="block text-sm font-semibold">Generate AI Template</span><span className="text-xs text-stone-500">Coming soon</span></span></button></div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">{quickActions.map(([label, href, Icon, style]) => <Link key={label} href={href} className="flex min-h-24 items-center gap-3 rounded-2xl border border-stone-200/80 bg-white/85 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"><span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${style}`}><Icon className="h-5 w-5" /></span><span className="text-sm font-semibold">{label}</span></Link>)}</div>
     </Section>
 
     <div className="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
