@@ -1,5 +1,6 @@
 "use client";
 
+import { useUser } from "@clerk/nextjs";
 import {
   Bot,
   CalendarDays,
@@ -70,8 +71,26 @@ const workspaces = [
   { title: "Meeting notes", type: "Notes", progress: "Updated 12m ago", accent: "bg-amber-500" },
 ];
 
+function getInitials(name: string) {
+  const initials = name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("");
+
+  return initials || "TS";
+}
+
 export default function Home() {
   const [collapsed, setCollapsed] = useState(false);
+  const { isLoaded, user } = useUser();
+  const emailName = user?.primaryEmailAddress?.emailAddress.split("@")[0];
+  const greetingName = user?.firstName || user?.fullName || user?.username || emailName || "there";
+  const spaceOwnerName = user?.fullName || user?.firstName || user?.username || emailName;
+  const spaceName = isLoaded && user && spaceOwnerName ? `${spaceOwnerName}'s Space` : "Personal Space";
+  const avatarInitials = getInitials(user?.fullName || user?.username || emailName || "Taskara Space");
+  const avatarUrl = user?.imageUrl;
 
   return (
     <main className="min-h-screen bg-[var(--app-surface)] text-stone-950">
@@ -171,15 +190,23 @@ export default function Home() {
                 collapsed ? "justify-center" : "justify-center sm:justify-start"
               }`}
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-sm font-semibold text-white">
-                BD
-              </div>
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={`${spaceName} avatar`}
+                  className="h-9 w-9 shrink-0 rounded-lg object-cover ring-1 ring-white/80"
+                />
+              ) : (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-sm font-semibold text-white">
+                  {avatarInitials}
+                </div>
+              )}
               <div
                 className={`min-w-0 transition-opacity duration-200 ${
                   collapsed ? "sr-only" : "sr-only sm:not-sr-only sm:opacity-100"
                 }`}
               >
-                <p className="truncate text-sm font-medium text-stone-900">Blair&apos;s Space</p>
+                <p className="truncate text-sm font-medium text-stone-900">{spaceName}</p>
                 <p className="truncate text-xs text-stone-500">Personal workspace</p>
               </div>
             </div>
@@ -190,7 +217,7 @@ export default function Home() {
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-5 py-5 sm:px-7 lg:px-9">
             <header className="flex flex-col gap-4 rounded-2xl border border-stone-200/80 bg-white/78 p-4 shadow-[0_20px_60px_rgba(120,90,60,0.08)] backdrop-blur md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-amber-700">Good morning, Blair</p>
+                <p className="text-sm font-medium text-amber-700">Good morning, {greetingName}</p>
                 <h1 className="mt-1 text-2xl font-semibold text-stone-950 sm:text-3xl">
                   Your ideas, boards, and tasks in one calm place.
                 </h1>
