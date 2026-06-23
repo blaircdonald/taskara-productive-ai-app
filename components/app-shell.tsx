@@ -81,7 +81,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen">
         <aside className={`sticky top-0 z-30 flex h-screen shrink-0 flex-col border-r border-stone-200/80 bg-white/88 shadow-[8px_0_30px_rgba(120,90,60,0.08)] backdrop-blur-xl transition-[width] duration-300 ${collapsed ? "w-[68px] sm:w-[84px]" : "w-[68px] sm:w-[280px]"}`}>
           <div className="flex h-20 items-center justify-center gap-3 border-b border-stone-200/70 px-3 sm:justify-start sm:px-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#a54f36] text-white shadow-sm"><Sparkles className="h-5 w-5 text-white" /></div>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#a54f36] text-white shadow-sm"><Sparkles className="h-5 w-5" color="#ffffff" stroke="#ffffff" /></div>
             {!collapsed && <div className="hidden min-w-0 sm:block"><p className="text-sm font-semibold">Taskara</p><p className="text-xs text-stone-500">Focus workspace</p></div>}
           </div>
           <div className="flex justify-center px-3 py-3 sm:justify-end">
