@@ -96,7 +96,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 const active = item.href !== "#" && (pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`)));
                 const Icon = item.icon;
                 return <Link key={item.label} href={item.href} title={item.label} aria-label={item.label} className={`group flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition ${active ? "bg-[#a54f36] text-white shadow-sm" : "text-stone-600 hover:bg-stone-100 hover:text-stone-950"} ${collapsed ? "justify-center" : "justify-center sm:justify-start"}`}>
-                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${active ? "bg-white/14" : "bg-white shadow-sm ring-1 ring-stone-200/70"}`}><Icon className="h-4 w-4" style={{ color: active ? "#fef3c7" : item.color }} /></span>
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${active ? "bg-white/14" : "bg-white shadow-sm ring-1 ring-stone-200/70"}`}><Icon className="h-4 w-4" style={{ color: active ? "#ffffff" : item.color }} /></span>
                   {!collapsed && <span className="sr-only min-w-0 truncate sm:not-sr-only">{item.label}</span>}
                 </Link>;
               })}
