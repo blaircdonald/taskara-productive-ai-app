@@ -112,6 +112,22 @@ function numberArg(args: Record<string, unknown>, key: string) {
   return value;
 }
 
+const terminalActions = new Set([
+  "create_board",
+  "create_task",
+  "create_calendar_item",
+  "create_note",
+  "refine_note",
+  "create_whiteboard_diagram",
+  "create_space_page",
+  "update_settings",
+]);
+
+function completionReply(result: AssistantResult) {
+  if (result.pendingActionId) return `I need your confirmation before I do that: ${result.detail}`;
+  return `${result.title}: ${result.detail}`;
+}
+
 export async function ownedThread(ownerId: string, threadId: number) {
   const thread = (await db.select().from(assistantThreads).where(and(eq(assistantThreads.id, threadId), eq(assistantThreads.ownerId, ownerId))).limit(1))[0];
   if (!thread) throw new Error("Conversation not found.");
@@ -201,6 +217,14 @@ export async function runAssistantAction(ownerId: string, threadId: number, acti
     if (scheduledDate && !validDate(scheduledDate)) throw new Error("Use a calendar date in YYYY-MM-DD format.");
     if (scheduledTime && !validTime(scheduledTime)) throw new Error("Use a time in HH:MM format.");
     const category = await defaultCategory(ownerId, kind === "reminder" ? "reminders" : "calendar");
+    const existing = (await db.select({ id: calendarItems.id }).from(calendarItems).where(and(
+      eq(calendarItems.ownerId, ownerId),
+      eq(calendarItems.title, title),
+      eq(calendarItems.kind, kind),
+      scheduledDate ? eq(calendarItems.scheduledDate, scheduledDate) : isNull(calendarItems.scheduledDate),
+      scheduledTime ? eq(calendarItems.scheduledTime, `${scheduledTime}:00`) : isNull(calendarItems.scheduledTime),
+    )).limit(1))[0];
+    if (existing) return { title: `${kind === "reminder" ? "Reminder" : "Calendar task"} already exists`, detail: [title, scheduledDate, scheduledTime].filter(Boolean).join(" · "), href: "/calendar" };
     await db.insert(calendarItems).values({ ownerId, title, kind, description: stringArg(args, "description").slice(0, 1000) || null, scheduledDate: scheduledDate || null, scheduledTime: scheduledTime ? `${scheduledTime}:00` : null, categoryId: category.id });
     return { title: `${kind === "reminder" ? "Reminder" : "Calendar task"} created`, detail: [title, scheduledDate, scheduledTime].filter(Boolean).join(" · "), href: "/calendar" };
   }
@@ -316,6 +340,7 @@ ${context}`,
     try {
       const result = await runAssistantAction(ownerId, threadId, parsed.tool.name, parsed.tool.arguments || {});
       results.push(result);
+      if (terminalActions.has(parsed.tool.name)) return { reply: completionReply(result), results };
       context += `\nTOOL ${parsed.tool.name} RESULT: ${JSON.stringify(result)}`;
     } catch (error) {
       context += `\nTOOL ${parsed.tool.name} ERROR: ${error instanceof Error ? error.message : "Action failed"}`;

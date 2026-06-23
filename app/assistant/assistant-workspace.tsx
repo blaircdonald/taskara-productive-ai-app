@@ -30,6 +30,7 @@ export function AssistantWorkspace({ initialThreads, initialPrompt = "" }: { ini
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuId, setMenuId] = useState<number | null>(null);
   const [startVoiceAfterThread, setStartVoiceAfterThread] = useState(false);
+  const sendInFlightRef = useRef(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const reloadThreads = useCallback(async () => {
@@ -65,7 +66,8 @@ export function AssistantWorkspace({ initialThreads, initialPrompt = "" }: { ini
 
   async function send(value = prompt) {
     const text = value.trim();
-    if (!text || pending) return;
+    if (!text || pending || sendInFlightRef.current) return;
+    sendInFlightRef.current = true;
     setPrompt("");
     setError("");
     setPending(true);
@@ -81,7 +83,10 @@ export function AssistantWorkspace({ initialThreads, initialPrompt = "" }: { ini
     } catch (cause) {
       setMessages((current) => current.filter((message) => message.id !== optimistic.id));
       setError(cause instanceof Error ? cause.message : "AI Assistant could not respond.");
-    } finally { setPending(false); }
+    } finally {
+      sendInFlightRef.current = false;
+      setPending(false);
+    }
   }
 
   async function resolve(actionId: number, decision: "approve" | "reject") {
@@ -186,7 +191,7 @@ export function AssistantWorkspace({ initialThreads, initialPrompt = "" }: { ini
 }
 
 function EmptyState({ onSelect }: { onSelect: (value: string) => void }) {
-  return <div className="m-auto w-full py-8 text-center"><span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-amber-100 text-violet-700 shadow-sm"><Sparkles className="h-7 w-7" /></span><h2 className="mt-5 text-3xl font-semibold">AI Assistant</h2><p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-stone-500">Ask questions, plan your day, or tell me what to create across your Taskara workspace.</p><div className="mt-8 grid gap-3 text-left sm:grid-cols-2 lg:grid-cols-3">{suggestions.map(([label, Icon]) => <button key={label} onClick={() => onSelect(label)} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md"><Icon className="h-5 w-5 text-violet-600" /><span className="mt-3 block text-sm font-medium">{label}</span></button>)}</div></div>;
+  return <div className="m-auto w-full py-8 text-center"><span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-amber-100 text-violet-700 shadow-sm"><Sparkles className="h-7 w-7" /></span><h2 className="mt-5 text-3xl font-semibold">AI Assistant</h2><p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-stone-500">Ask questions, plan your day, or tell me what to create across your Taskara workspace.</p><div className="mt-8 grid gap-3 text-left sm:grid-cols-2 lg:grid-cols-3">{suggestions.map(([label, Icon]) => <button key={label} onClick={() => onSelect(label)} className="flex min-h-24 items-center gap-4 rounded-2xl border border-stone-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md"><Icon className="h-5 w-5 shrink-0 text-violet-600" /><span className="block text-sm font-medium leading-5">{label}</span></button>)}</div></div>;
 }
 
 function MessageBubble({ message }: { message: Message }) {
