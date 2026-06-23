@@ -127,7 +127,7 @@ function DashboardMockup() {
         <div className="min-w-0 p-3 sm:p-5">
           <div className="rounded-2xl bg-gradient-to-r from-white to-amber-50 p-4 shadow-sm">
             <div className="flex items-center gap-2 text-xs font-semibold text-amber-700">
-              <Sparkles className="h-3.5 w-3.5" />Good morning, Blair
+              <Sparkles className="h-3.5 w-3.5" />Good morning!
             </div>
             <p className="mt-2 text-lg font-semibold sm:text-2xl">A calm view of everything moving forward.</p>
           </div>
